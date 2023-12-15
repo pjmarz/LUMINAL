@@ -1,0 +1,63 @@
+version: "3.8"
+services:
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/radarr:/config
+      - ${MEDIA}/movies:/movies
+      - ${CHARON}/sabnzbd/downloads:/downloads
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+    networks:
+      - multimediaservices_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/sonarr:/config
+      - ${MEDIA}/tv:/tv
+      - ${CHARON}/sabnzbd/downloads:/downloads
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+    networks:
+      - multimediaservices_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/bazarr:/config
+      - ${MEDIA}/movies:/movies
+      - ${MEDIA}/tv:/tv
+    ports:
+      - 6767:6767
+    restart: unless-stopped
+    networks:
+      - multimediaservices_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+networks:
+  multimediaservices_network:
+    external: true

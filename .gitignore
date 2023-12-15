@@ -1,0 +1,4 @@
+# Ignore NVIDIA driver file
+*.run
+# Ignore the scritp logs
+script_logs/
