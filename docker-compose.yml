@@ -58,6 +58,68 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
 
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    ports:
+      - 9696:9696
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/prowlarr:/config
+    restart: unless-stopped
+    networks:
+      - multimediaservices_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/sabnzbd:/config
+      - ${CHARON}/sabnzbd/downloads:/downloads
+      - ${CHARON}/sabnzbd/downloads/intermediate:/intermediate
+      - ${CHARON}/sabnzbd/downloads/completed:/completed
+    ports:
+      - 8080:8080
+    restart: unless-stopped
+    networks:
+      - multimediaservices_network
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  plex:
+    runtime: nvidia
+    privileged: true
+    container_name: plex
+    hostname: plex
+    image: lscr.io/linuxserver/plex:latest
+    restart: unless-stopped
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - VERSION=docker
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - AUTO_UPDATE=true
+    network_mode: host
+    volumes:
+      - ${ROOT}/config/plexdb:/config
+      - ${ROOT}/transcode:/transcode
+      - ${MEDIA}/movies:/movies
+      - ${MEDIA}/tv:/tv
+      - ${MEDIA}/xxx:/xxx
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
 networks:
   multimediaservices_network:
     external: true
