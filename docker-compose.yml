@@ -15,10 +15,6 @@ services:
     ports:
       - 7878:7878
     restart: unless-stopped
-    networks:
-      - multimediaservices_network
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
@@ -34,10 +30,6 @@ services:
     ports:
       - 8989:8989
     restart: unless-stopped
-    networks:
-      - multimediaservices_network
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -53,10 +45,6 @@ services:
     ports:
       - 6767:6767
     restart: unless-stopped
-    networks:
-      - multimediaservices_network
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   prowlarr:
     container_name: prowlarr
@@ -70,10 +58,6 @@ services:
     volumes:
       - ${ROOT}/config/prowlarr:/config
     restart: unless-stopped
-    networks:
-      - multimediaservices_network
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
@@ -90,10 +74,6 @@ services:
     ports:
       - 8080:8080
     restart: unless-stopped
-    networks:
-      - multimediaservices_network
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   plex:
     runtime: nvidia
@@ -116,10 +96,3 @@ services:
       - ${ROOT}/transcode:/transcode
       - ${MEDIA}/movies:/movies
       - ${MEDIA}/tv:/tv
-      - ${MEDIA}/xxx:/xxx
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-
-networks:
-  multimediaservices_network:
-    external: true
