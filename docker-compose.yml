@@ -31,6 +31,36 @@ services:
       - 8989:8989
     restart: unless-stopped
 
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/lidarr:/config
+      - ${MEDIA}/music:/music
+      - ${CHARON}/sabnzbd/downloads:/downloads
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
+  readarr:
+    image: lscr.io/linuxserver/readarr:nightly
+    container_name: readarr
+    environment:
+      - PGID=1000
+      - PUID=1000
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/readarr:/config
+      - ${MEDIA}/books:/books
+      - ${CHARON}/sabnzbd/downloads:/downloads
+    ports:
+      - 8787:8787
+    restart: unless-stopped
+
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
@@ -96,8 +126,6 @@ services:
       - 1900:1900/udp
     network_mode: host
     restart: unless-stopped
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
 
   plex:
     runtime: nvidia
