@@ -105,30 +105,6 @@ services:
       - 8080:8080
     restart: unless-stopped
 
-  jellyfin:
-    image: lscr.io/linuxserver/jellyfin:latest
-    container_name: jellyfin
-    runtime: nvidia
-    privileged: true
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${ROOT}/config/jellyfin:/config
-      - ${ROOT}/transcode:/transcode
-      - ${MEDIA}/movies:/movies
-      - ${MEDIA}/tv:/tv
-      - ${MEDIA}/music:/music
-      - ${MEDIA}/books:/books
-    ports:
-      - 8096:8096
-      - 8920:8920
-      - 7359:7359/udp
-      - 1900:1900/udp
-    network_mode: host
-    restart: unless-stopped
-
   plex:
     runtime: nvidia
     privileged: true
