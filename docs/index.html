@@ -4,61 +4,225 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LUMINAL - Ollama Setup</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --container-bg: #ffffff;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
-            max-width: 800px;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            animation: fadeIn 1s ease-in;
+        }
+
+        .container {
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
-            color: #333;
+            padding: 0 20px;
         }
-        h1, h2 {
-            color: #2c3e50;
+
+        .card {
+            background-color: var(--container-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
         }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
         code {
             background-color: #f6f8fa;
-            padding: 2px 5px;
+            padding: 0.2rem 0.4rem;
             border-radius: 3px;
-            font-family: monospace;
+            font-family: 'Consolas', monospace;
+            color: var(--secondary-color);
         }
-        .container {
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        .model-card {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .model-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            color: var(--secondary-color);
+        }
+
+        .requirements-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirements-list li {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .requirements-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .steps-list {
+            counter-reset: steps;
+            list-style: none;
+            padding: 0;
+        }
+
+        .steps-list li {
+            margin-bottom: 1rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .steps-list li:before {
+            counter-increment: steps;
+            content: counter(steps);
+            position: absolute;
+            left: 0;
+            width: 2rem;
+            height: 2rem;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .github-link {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            color: white;
+            font-size: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .github-link:hover {
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            .github-link {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="https://github.com/pjmarz/LUMINAL" class="github-link" target="_blank">
+        <i class="fab fa-github"></i>
+    </a>
+    
+    <div class="header">
+        <h1>🚀 LUMINAL</h1>
+        <p>Ollama and Open WebUI Setup</p>
+    </div>
+
     <div class="container">
-        <h1>LUMINAL - Ollama and Open WebUI Setup</h1>
+        <div class="card">
+            <h2>📝 Current Configuration</h2>
+            <p>This repository contains a Docker Compose setup for running Ollama with Open WebUI, configured with NVIDIA GPU support.</p>
+        </div>
         
-        <h2>Current Configuration</h2>
-        <p>This repository contains a Docker Compose setup for running Ollama with Open WebUI, configured with NVIDIA GPU support.</p>
-        
-        <h2>Available Models</h2>
-        <ul>
-            <li><code>mistral:latest</code> - 4.1 GB</li>
-            <li><code>gemma:7b</code> - 5.0 GB</li>
-            <li><code>llama3.1:8b</code> - 4.9 GB</li>
-        </ul>
+        <div class="card">
+            <h2>🤖 Available Models</h2>
+            <div class="model-card">
+                <i class="fas fa-brain model-icon"></i>
+                <div>
+                    <strong>mistral:latest</strong>
+                    <p>Size: 4.1 GB</p>
+                </div>
+            </div>
+            <div class="model-card">
+                <i class="fas fa-microchip model-icon"></i>
+                <div>
+                    <strong>gemma:7b</strong>
+                    <p>Size: 5.0 GB</p>
+                </div>
+            </div>
+            <div class="model-card">
+                <i class="fas fa-robot model-icon"></i>
+                <div>
+                    <strong>llama3.1:8b</strong>
+                    <p>Size: 4.9 GB</p>
+                </div>
+            </div>
+        </div>
 
-        <h2>System Requirements</h2>
-        <ul>
-            <li>NVIDIA GPU with CUDA support</li>
-            <li>Docker with NVIDIA Container Toolkit</li>
-            <li>At least 16GB of RAM recommended</li>
-        </ul>
+        <div class="card">
+            <h2>💻 System Requirements</h2>
+            <ul class="requirements-list">
+                <li>NVIDIA GPU with CUDA support</li>
+                <li>Docker with NVIDIA Container Toolkit</li>
+                <li>At least 16GB of RAM recommended</li>
+            </ul>
+        </div>
 
-        <h2>Quick Start</h2>
-        <p>To get started with this setup:</p>
-        <ol>
-            <li>Clone the repository</li>
-            <li>Make sure you have Docker and NVIDIA drivers installed</li>
-            <li>Run <code>docker compose up -d</code></li>
-            <li>Access the WebUI at <code>http://localhost:3000</code></li>
-        </ol>
+        <div class="card">
+            <h2>🚀 Project Overview</h2>
+            <ol class="steps-list">
+                <li>Custom Docker Compose configuration for AI development</li>
+                <li>NVIDIA GPU acceleration enabled for optimal performance</li>
+                <li>Integrated Ollama and Open WebUI for seamless interaction</li>
+                <li>Web interface accessible at <code>http://localhost:3000</code></li>
+            </ol>
+        </div>
     </div>
 </body>
 </html> 
