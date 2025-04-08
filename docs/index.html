@@ -214,32 +214,6 @@
             margin-top: 1rem;
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
-            font-size: 0.875rem;
-            margin-right: 0.5rem;
-            background: var(--secondary-color);
-            color: white;
-        }
-
-        .status-badge.active {
-            background: #27ae60;
-        }
-
-        .status-badge.inactive {
-            background: #e74c3c;
-        }
-
-        .status-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
         .status-card {
             background: var(--container-bg);
             padding: 1rem;
@@ -247,32 +221,6 @@
             box-shadow: 0 2px 4px var(--card-shadow);
             flex: 1;
             min-width: 200px;
-        }
-
-        .gpu-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .gpu-stat {
-            text-align: center;
-            padding: 1rem;
-            background: var(--container-bg);
-            border-radius: 0.5rem;
-            box-shadow: 0 2px 4px var(--card-shadow);
-        }
-
-        .gpu-stat h3 {
-            margin: 0;
-            color: var(--secondary-color);
-        }
-
-        .gpu-stat p {
-            margin: 0.5rem 0 0;
-            font-size: 1.25rem;
-            font-weight: bold;
         }
     </style>
 </head>
@@ -297,39 +245,11 @@
         
         <div class="card">
             <h2>🤖 Available Models</h2>
-            <div class="status-container">
-                <span class="status-badge active">
-                    <i class="fas fa-circle"></i>&nbsp; Services Active
-                </span>
-                <span class="status-badge" id="gpuStatus">
-                    <i class="fas fa-microchip"></i>&nbsp; Checking GPU...
-                </span>
-                <span class="status-badge">
-                    <i class="fas fa-clock"></i>&nbsp; Last Updated: <span id="lastUpdate">Just now</span>
-                </span>
-            </div>
             <div class="model-stats">
                 <div class="status-card">
                     <h3>Model Size Comparison</h3>
                     <div class="chart-container">
                         <canvas id="modelSizeChart"></canvas>
-                    </div>
-                </div>
-                <div class="status-card">
-                    <h3>GPU Utilization</h3>
-                    <div class="gpu-stats">
-                        <div class="gpu-stat">
-                            <h3>Memory</h3>
-                            <p id="gpuMemory">-- / --</p>
-                        </div>
-                        <div class="gpu-stat">
-                            <h3>Load</h3>
-                            <p id="gpuLoad">--%</p>
-                        </div>
-                        <div class="gpu-stat">
-                            <h3>Temperature</h3>
-                            <p id="gpuTemp">--°C</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -436,30 +356,6 @@
                 }
             }
         });
-
-        // Simulate GPU stats updates
-        function updateGPUStats() {
-            // In a real implementation, these would come from your server
-            const memory = Math.floor(Math.random() * 3000 + 5000);
-            const load = Math.floor(Math.random() * 30 + 10);
-            const temp = Math.floor(Math.random() * 15 + 50);
-            
-            document.getElementById('gpuMemory').textContent = `${memory}MB / 8192MB`;
-            document.getElementById('gpuLoad').textContent = `${load}%`;
-            document.getElementById('gpuTemp').textContent = `${temp}°C`;
-            
-            const gpuStatus = document.getElementById('gpuStatus');
-            gpuStatus.className = 'status-badge active';
-            gpuStatus.innerHTML = '<i class="fas fa-microchip"></i>&nbsp; GPU Active';
-            
-            const now = new Date();
-            document.getElementById('lastUpdate').textContent = 
-                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        }
-
-        // Update stats every 5 seconds
-        updateGPUStats();
-        setInterval(updateGPUStats, 5000);
     </script>
 </body>
 </html> 
