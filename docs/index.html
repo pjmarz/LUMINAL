@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUMINAL - Ollama Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        code {
+            background-color: #f6f8fa;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LUMINAL - Ollama and Open WebUI Setup</h1>
+        
+        <h2>Current Configuration</h2>
+        <p>This repository contains a Docker Compose setup for running Ollama with Open WebUI, configured with NVIDIA GPU support.</p>
+        
+        <h2>Available Models</h2>
+        <ul>
+            <li><code>mistral:latest</code> - 4.1 GB</li>
+            <li><code>gemma:7b</code> - 5.0 GB</li>
+            <li><code>llama3.1:8b</code> - 4.9 GB</li>
+        </ul>
+
+        <h2>System Requirements</h2>
+        <ul>
+            <li>NVIDIA GPU with CUDA support</li>
+            <li>Docker with NVIDIA Container Toolkit</li>
+            <li>At least 16GB of RAM recommended</li>
+        </ul>
+
+        <h2>Quick Start</h2>
+        <p>To get started with this setup:</p>
+        <ol>
+            <li>Clone the repository</li>
+            <li>Make sure you have Docker and NVIDIA drivers installed</li>
+            <li>Run <code>docker compose up -d</code></li>
+            <li>Access the WebUI at <code>http://localhost:3000</code></li>
+        </ol>
+    </div>
+</body>
+</html> 
