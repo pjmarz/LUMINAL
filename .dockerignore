@@ -1,0 +1,26 @@
+# Version control
+.git
+.github
+.gitignore
+
+# Environment and secrets
+.env
+.env.*
+secrets/
+env.sh
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# Development tools
+.vscode/
+.idea/
+*.log
+
+# Application specific
+shared/
+**/node_modules/
+**/.npm/
+**/.cache/
