@@ -21,6 +21,7 @@ This platform integrates multiple cutting-edge technologies into a cohesive, con
 - Docker containerization with advanced configuration patterns
 - NVIDIA GPU passthrough for accelerated AI workloads
 - Container orchestration with Docker Compose
+- Automated container updates with Watchtower
 - Secure secrets management and environment configuration
 - Service networking and inter-container communication
 

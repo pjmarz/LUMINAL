@@ -1,3 +1,5 @@
+name: luminal
+
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
   networks: ['luminal']
@@ -20,6 +22,8 @@ x-n8n: &service-n8n
     - postgres_password
     - n8n_encryption_key
     - n8n_jwt_secret
+  labels:
+    - "com.centurylinklabs.watchtower.enable=true"
 
 services:
   postgres:
@@ -40,6 +44,8 @@ services:
       retries: 10
     secrets:
       - postgres_password
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   n8n:
     <<: *service-n8n
@@ -66,6 +72,8 @@ services:
       - 6333:6333
     volumes:
       - qdrant_storage:/qdrant/storage
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   ollama:
     image: ollama/ollama:latest
@@ -83,6 +91,8 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
               
   ollama-pull-llama:
     image: ollama/ollama:latest
@@ -114,6 +124,16 @@ services:
     depends_on:
       - ollama
       - ollama-pull-llama
+
+  watchtower:
+    container_name: watchtower-luminal
+    hostname: watchtower-luminal
+    image: containrrr/watchtower:latest
+    networks: ['luminal']
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    command: --interval 3600 --label-enable --cleanup --remove-volumes
 
 volumes:
   n8n_storage:
