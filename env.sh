@@ -16,4 +16,7 @@ export N8N_ENCRYPTION_KEY=$(cat ./secrets/n8n_encryption_key)
 export N8N_USER_MANAGEMENT_JWT_SECRET=$(cat ./secrets/n8n_jwt_secret)
 export N8N_SECURE_COOKIE=false
 
+# Load OpenWebUI configuration
+export OPENWEBUI_SECRET_KEY=$(cat ./secrets/openwebui_secret_key)
+
 # Add any other environment variables here

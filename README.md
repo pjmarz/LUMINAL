@@ -10,8 +10,9 @@ This platform integrates multiple cutting-edge technologies into a cohesive, con
 
 - **Workflow Automation**: n8n with custom AI nodes and integrations
 - **Data Persistence**: PostgreSQL with secure container configurations
-- **AI Processing**: 
+- **AI Processing**:
   - Ollama with NVIDIA GPU acceleration for performant LLM inference
+  - **OpenWebUI**: Self-hosted AI web interface with chat, RAG, and model management
   - Vector database (Qdrant) for semantic search and embeddings storage
 - **Security**: Advanced secrets management and environment isolation
 
@@ -61,6 +62,29 @@ This platform integrates multiple cutting-edge technologies into a cohesive, con
 - Comprehensive architecture documentation
 - Clear technical evolution tracking
 - Troubleshooting guidance for complex systems
+
+## Accessing Your Services
+
+Once your stack is running, you can access the following services:
+
+- **n8n Workflow Automation**: http://localhost:5678
+- **OpenWebUI AI Interface**: http://localhost:3000
+- **Qdrant Dashboard**: http://localhost:6333/dashboard
+- **Ollama API**: http://localhost:11434
+
+### Getting Started with OpenWebUI
+
+1. Visit http://localhost:3000 in your browser
+2. Create your first admin account
+3. Navigate to Settings → Models to verify your Ollama models are detected
+4. Start chatting with your AI models!
+
+### Key OpenWebUI Features
+
+- **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma3:12b, and gpt-oss:20b
+- **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
+- **GPU Acceleration**: Direct GPU passthrough for optimal performance
+- **Secure Authentication**: JWT-based authentication with secure secret keys
 
 ## Technical Evolution
 

@@ -42,5 +42,27 @@ docker-compose.override.yml
 .env
 .env.local
 .env.*.local
+.envrc
 env.sh
 secrets/
+
+# Additional security patterns
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+*.p7b
+*.p7c
+*.der
+*backup*
+*old*
+*temp*
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.cache/
+.tmp/

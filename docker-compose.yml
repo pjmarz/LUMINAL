@@ -2,7 +2,7 @@ name: luminal
 
 x-n8n: &service-n8n
   image: n8nio/n8n:latest
-  networks: ['luminal']
+  networks: ['luminal_default']
   environment:
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
@@ -29,7 +29,7 @@ services:
   postgres:
     image: postgres:16-alpine
     hostname: postgres
-    networks: ['luminal']
+    networks: ['luminal_default']
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-n8n}
@@ -42,8 +42,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    secrets:
-      - postgres_password
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
@@ -66,7 +64,7 @@ services:
     image: qdrant/qdrant
     hostname: qdrant
     container_name: qdrant
-    networks: ['luminal']
+    networks: ['luminal_default']
     restart: unless-stopped
     ports:
       - 6333:6333
@@ -78,7 +76,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
-    networks: ['luminal']
+    networks: ['luminal_default']
     restart: unless-stopped
     ports:
       - 11434:11434
@@ -96,7 +94,7 @@ services:
               
   ollama-pull-llama:
     image: ollama/ollama:latest
-    networks: ['luminal']
+    networks: ['luminal_default']
     container_name: ollama-pull-llama
     volumes:
       - ollama_storage:/root/.ollama
@@ -111,7 +109,7 @@ services:
 
   ollama-pull-gemma:
     image: ollama/ollama:latest
-    networks: ['luminal']
+    networks: ['luminal_default']
     container_name: ollama-pull-gemma
     volumes:
       - ollama_storage:/root/.ollama
@@ -125,24 +123,74 @@ services:
       - ollama
       - ollama-pull-llama
 
+  ollama-pull-gpt-oss:
+    image: ollama/ollama:latest
+    networks: ['luminal_default']
+    container_name: ollama-pull-gpt-oss
+    volumes:
+      - ollama_storage:/root/.ollama
+    entrypoint: /bin/sh
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    command:
+      - "-c"
+      - "sleep 9; ollama pull gpt-oss:20b"
+    depends_on:
+      - ollama
+      - ollama-pull-gemma
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: openwebui
+    hostname: openwebui
+    networks: ['luminal_default']
+    restart: unless-stopped
+    ports:
+      - 3000:8080
+    volumes:
+      - openwebui_storage:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${OPENWEBUI_SECRET_KEY}
+      - ENABLE_RAG_WEB_SEARCH=true
+      - RAG_WEB_SEARCH_ENGINE=searxng
+      - VECTOR_DB=qdrant
+      - QDRANT_URI=http://qdrant:6333
+    secrets:
+      - openwebui_secret_key
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      - ollama
+      - qdrant
+
   watchtower:
     container_name: watchtower-luminal
     hostname: watchtower-luminal
     image: containrrr/watchtower:latest
-    networks: ['luminal']
+    networks: ['luminal_default']
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     command: --interval 3600 --label-enable --cleanup --remove-volumes
 
+networks:
+  luminal_default:
+    external: true
 volumes:
   n8n_storage:
   postgres_storage:
   ollama_storage:
   qdrant_storage:
+  openwebui_storage:
 
-networks:
-  luminal:
 
 secrets:
   postgres_password:
@@ -151,3 +199,5 @@ secrets:
     file: ./secrets/n8n_encryption_key
   n8n_jwt_secret:
     file: ./secrets/n8n_jwt_secret
+  openwebui_secret_key:
+    file: ./secrets/openwebui_secret_key

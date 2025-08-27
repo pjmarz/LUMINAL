@@ -258,12 +258,13 @@
     <div class="header">
         <h1>🚀 LUMINAL</h1>
         <p>n8n Self-Hosted AI Environment</p>
+        <p class="version-badge">Version 0.2.0</p>
     </div>
 
     <div class="container">
         <div class="card">
             <h2>📝 Current Configuration</h2>
-            <p>LUMINAL is a comprehensive Docker Compose setup for a self-hosted AI environment using n8n with PostgreSQL, Ollama (with NVIDIA GPU support), and Qdrant vector database.</p>
+            <p>LUMINAL is a comprehensive Docker Compose setup for a self-hosted AI environment using n8n, OpenWebUI, PostgreSQL, Ollama (with NVIDIA GPU support), and Qdrant vector database.</p>
             
             <div class="component-grid">
                 <div class="component-card">
@@ -280,6 +281,11 @@
                     <i class="fas fa-brain component-icon"></i>
                     <h3>Ollama</h3>
                     <p>Self-hosted LLM service with GPU support</p>
+                </div>
+                <div class="component-card">
+                    <i class="fas fa-comments component-icon"></i>
+                    <h3>OpenWebUI</h3>
+                    <p>AI chat interface with RAG capabilities</p>
                 </div>
                 <div class="component-card">
                     <i class="fas fa-vector-square component-icon"></i>
@@ -313,6 +319,13 @@
                     <p>Size: 8.1 GB</p>
                 </div>
             </div>
+            <div class="model-card">
+                <i class="fas fa-rocket model-icon"></i>
+                <div>
+                    <strong>gpt-oss:20b</strong>
+                    <p>Size: ~13.8 GB</p>
+                </div>
+            </div>
         </div>
 
         <div class="card">
@@ -331,10 +344,37 @@
                 <li>Custom Docker Compose configuration for AI workflow development</li>
                 <li>NVIDIA GPU acceleration for optimal AI model performance</li>
                 <li>n8n web interface accessible at <code>http://localhost:5678</code></li>
+                <li>OpenWebUI chat interface accessible at <code>http://localhost:3000</code></li>
                 <li>Set up PostgreSQL for persistent data storage</li>
                 <li>Qdrant vector database for semantic search capabilities</li>
                 <li>Secure environment management with Docker secrets</li>
             </ol>
+        </div>
+
+        <div class="card">
+            <h2>🌐 Service Access</h2>
+            <div class="component-grid">
+                <div class="status-card">
+                    <h3>n8n Automation</h3>
+                    <p><strong>URL:</strong> <code>http://localhost:5678</code></p>
+                    <p>Low-code workflow automation with AI integrations</p>
+                </div>
+                <div class="status-card">
+                    <h3>OpenWebUI</h3>
+                    <p><strong>URL:</strong> <code>http://localhost:3000</code></p>
+                    <p>AI chat interface with RAG and model management</p>
+                </div>
+                <div class="status-card">
+                    <h3>Qdrant Dashboard</h3>
+                    <p><strong>URL:</strong> <code>http://localhost:6333/dashboard</code></p>
+                    <p>Vector database management interface</p>
+                </div>
+                <div class="status-card">
+                    <h3>Ollama API</h3>
+                    <p><strong>URL:</strong> <code>http://localhost:11434</code></p>
+                    <p>Direct API access to LLM models</p>
+                </div>
+            </div>
         </div>
     </div>
     <script>
@@ -366,17 +406,19 @@
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['llama3.1:8b', 'gemma3:12b'],
+                labels: ['llama3.1:8b', 'gemma3:12b', 'gpt-oss:20b'],
                 datasets: [{
                     label: 'Model Size (GB)',
-                    data: [4.9, 8.1],
+                    data: [4.9, 8.1, 13.8],
                     backgroundColor: [
                         'rgba(155, 89, 182, 0.8)',
-                        'rgba(46, 204, 113, 0.8)'
+                        'rgba(46, 204, 113, 0.8)',
+                        'rgba(52, 152, 219, 0.8)'
                     ],
                     borderColor: [
                         'rgba(155, 89, 182, 1)',
-                        'rgba(46, 204, 113, 1)'
+                        'rgba(46, 204, 113, 1)',
+                        'rgba(52, 152, 219, 1)'
                     ],
                     borderWidth: 1
                 }]
