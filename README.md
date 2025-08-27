@@ -82,6 +82,9 @@ Once your stack is running, you can access the following services:
 ### Key OpenWebUI Features
 
 - **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma3:12b, and gpt-oss:20b
+  - **llama3.1:8b** (4.9GB) - Fast and capable general-purpose model
+  - **gemma3:12b** (8.1GB) - High-performance model for complex tasks
+  - **gpt-oss:20b** (~20GB) - Maximum capability for advanced reasoning
 - **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
 - **Secure Authentication**: JWT-based authentication with secure secret keys
