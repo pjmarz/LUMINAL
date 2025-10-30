@@ -26,11 +26,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implemented `POSTGRES_PASSWORD_FILE` for superuser password
   - Follows PostgreSQL 16+ best practices for secret management
   - Eliminates hardcoded passwords in docker-compose.yml
+- **n8n Database Password Security**: Migrated to Docker secrets
+  - Changed `DB_POSTGRESDB_PASSWORD` to `DB_POSTGRESDB_PASSWORD_FILE=/run/secrets/n8n_db_password`
+  - Eliminates hardcoded n8n database password from docker-compose.yml
+- **Langflow Database Password Security**: Migrated to Docker secrets
+  - Created wrapper script to read password from `/run/secrets/langflow_db_password`
+  - Eliminates hardcoded password from database connection string
+- **pgAdmin Credentials Security**: Migrated to Docker secrets
+  - Created wrapper script to read email and password from Docker secrets
+  - Eliminates hardcoded personal credentials from docker-compose.yml
+- **PostgreSQL Initialization Scripts**: Enhanced with secrets support
+  - Converted `init-databases.sql` to template with environment variable substitution
+  - Created wrapper script using `envsubst` to inject secrets at runtime
+  - Eliminates hardcoded passwords from database initialization scripts
 - **Environment Configuration Documentation**: Added comprehensive section
   - Clarified purpose of `.env`, `env.sh`, and `.envrc` files
   - Documented template vs. secrets separation strategy
   - Follows 12-factor app methodology
-- **pgAdmin Credentials**: Updated default credentials for production use
+
+### Security
+- **Eliminated All Hardcoded Passwords**: Complete migration to Docker secrets
+  - No plaintext passwords in docker-compose.yml
+  - No plaintext passwords in initialization scripts
+  - All database credentials managed via Docker secrets
+  - All service credentials managed via Docker secrets
+  - Secrets properly excluded from version control via .gitignore
+  - Comprehensive documentation added for all secret files
 
 ## [0.2.0] - 2025-08-27
 
