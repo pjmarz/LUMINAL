@@ -13,7 +13,7 @@ x-n8n: &service-n8n
     - DB_POSTGRESDB_PORT=5432
     - DB_POSTGRESDB_DATABASE=n8n
     - DB_POSTGRESDB_USER=n8n
-    - DB_POSTGRESDB_PASSWORD=n8n
+    - DB_POSTGRESDB_PASSWORD_FILE=/run/secrets/n8n_db_password
     - DB_POSTGRESDB_SCHEMA=public
     - N8N_DIAGNOSTICS_ENABLED=false
     - N8N_PERSONALIZATION_ENABLED=false
@@ -24,6 +24,7 @@ x-n8n: &service-n8n
   secrets:
     - n8n_encryption_key
     - n8n_jwt_secret
+    - n8n_db_password
   labels:
     - "com.centurylinklabs.watchtower.enable=true"
   user: "root"
@@ -40,6 +41,8 @@ services:
       - POSTGRES_DB=postgres
     secrets:
       - postgres_password
+      - n8n_db_password
+      - langflow_db_password
     volumes:
       - postgres_storage:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
@@ -59,13 +62,17 @@ services:
     restart: unless-stopped
     ports:
       - 5050:80
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=petermarino2@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=Westmoreland
-      - PGADMIN_CONFIG_SERVER_MODE=False
-      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
     volumes:
       - pgadmin_storage:/var/lib/pgadmin
+      - ./postgres-init/pgadmin-entrypoint.sh:/pgadmin-entrypoint.sh
+    entrypoint: /bin/bash
+    command: /pgadmin-entrypoint.sh
+    environment:
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    secrets:
+      - pgadmin_email
+      - pgadmin_password
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     depends_on:
@@ -96,9 +103,13 @@ services:
       - 7860:7860
     volumes:
       - langflow_storage:/app/langflow
+      - ./postgres-init/langflow-entrypoint.sh:/langflow-entrypoint.sh
+    entrypoint: /bin/bash
+    command: /langflow-entrypoint.sh langflow run
     environment:
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
       - LANGFLOW_AUTO_LOGIN=true
+    secrets:
+      - langflow_db_password
     deploy:
       resources:
         reservations:
@@ -253,9 +264,17 @@ secrets:
     file: ./secrets/n8n_encryption_key.txt
   n8n_jwt_secret:
     file: ./secrets/n8n_jwt_secret.txt
+  n8n_db_password:
+    file: ./secrets/n8n_db_password.txt
   openwebui_secret_key:
     file: ./secrets/openwebui_secret_key.txt
   langflow_api_key:
     file: ./secrets/langflow_api_key.txt
   langflow_secret_key:
     file: ./secrets/langflow_secret_key.txt
+  langflow_db_password:
+    file: ./secrets/langflow_db_password.txt
+  pgadmin_email:
+    file: ./secrets/pgadmin_email.txt
+  pgadmin_password:
+    file: ./secrets/pgadmin_password.txt
