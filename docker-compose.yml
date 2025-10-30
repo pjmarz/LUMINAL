@@ -4,26 +4,29 @@ x-n8n: &service-n8n
   image: n8nio/n8n:latest
   networks: ['luminal_default']
   environment:
+    - GENERIC_TIMEZONE=${TIMEZONE}
+    - TZ=${TIMEZONE}
+    - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    - N8N_RUNNERS_ENABLED=true
     - DB_TYPE=postgresdb
     - DB_POSTGRESDB_HOST=postgres
-    - DB_POSTGRESDB_USER=${POSTGRES_USER:-n8n}
-    - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-    - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-n8n}
+    - DB_POSTGRESDB_PORT=5432
+    - DB_POSTGRESDB_DATABASE=n8n
+    - DB_POSTGRESDB_USER=n8n
+    - DB_POSTGRESDB_PASSWORD=n8n
+    - DB_POSTGRESDB_SCHEMA=public
     - N8N_DIAGNOSTICS_ENABLED=false
     - N8N_PERSONALIZATION_ENABLED=false
-    - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
-    - N8N_USER_MANAGEMENT_JWT_SECRET=${N8N_USER_MANAGEMENT_JWT_SECRET}
+    - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
+    - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
     - OLLAMA_HOST=ollama:11434
-    - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false}
-    - N8N_RUNNERS_ENABLED=true
-  env_file:
-    - .env
+    - N8N_SECURE_COOKIE=false
   secrets:
-    - postgres_password
     - n8n_encryption_key
     - n8n_jwt_secret
   labels:
     - "com.centurylinklabs.watchtower.enable=true"
+  user: "root"
 
 services:
   postgres:
@@ -32,18 +35,41 @@ services:
     networks: ['luminal_default']
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-n8n}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-n8n}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_DB=postgres
+    secrets:
+      - postgres_password
     volumes:
       - postgres_storage:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER:-n8n} -d ${POSTGRES_DB:-n8n}']
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U postgres -d postgres']
       interval: 5s
       timeout: 5s
       retries: 10
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    hostname: pgadmin
+    networks: ['luminal_default']
+    restart: unless-stopped
+    ports:
+      - 5050:80
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=petermarino2@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=Westmoreland
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    volumes:
+      - pgadmin_storage:/var/lib/pgadmin
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      - postgres
 
   n8n:
     <<: *service-n8n
@@ -56,6 +82,32 @@ services:
       - n8n_storage:/home/node/.n8n
       - ./secrets:/home/node/.n8n/credentials
       - ./shared:/data/shared
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  langflow:
+    image: langflowai/langflow:latest
+    container_name: langflow
+    hostname: langflow
+    networks: ['luminal_default']
+    restart: unless-stopped
+    ports:
+      - 7860:7860
+    volumes:
+      - langflow_storage:/app/langflow
+    environment:
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+      - LANGFLOW_AUTO_LOGIN=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -151,7 +203,7 @@ services:
       - openwebui_storage:/app/backend/data
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_SECRET_KEY=${OPENWEBUI_SECRET_KEY}
+      - WEBUI_SECRET_KEY_FILE=/run/secrets/openwebui_secret_key
       - ENABLE_RAG_WEB_SEARCH=true
       - RAG_WEB_SEARCH_ENGINE=searxng
       - VECTOR_DB=qdrant
@@ -187,17 +239,23 @@ networks:
 volumes:
   n8n_storage:
   postgres_storage:
+  pgadmin_storage:
   ollama_storage:
   qdrant_storage:
   openwebui_storage:
+  langflow_storage:
 
 
 secrets:
   postgres_password:
-    file: ./secrets/postgres_password
+    file: ./secrets/postgres_password.txt
   n8n_encryption_key:
-    file: ./secrets/n8n_encryption_key
+    file: ./secrets/n8n_encryption_key.txt
   n8n_jwt_secret:
-    file: ./secrets/n8n_jwt_secret
+    file: ./secrets/n8n_jwt_secret.txt
   openwebui_secret_key:
-    file: ./secrets/openwebui_secret_key
+    file: ./secrets/openwebui_secret_key.txt
+  langflow_api_key:
+    file: ./secrets/langflow_api_key.txt
+  langflow_secret_key:
+    file: ./secrets/langflow_secret_key.txt

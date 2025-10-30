@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Langflow Integration**: Visual AI workflow builder with drag-and-drop interface
+  - Web interface accessible at `http://localhost:7860`
+  - GPU acceleration support for optimal performance
+  - Seamless integration with existing Ollama models
+  - PostgreSQL backend for persistent workflow storage
+  - Built-in support for Qdrant vector database
+  - Access to 600+ LangChain integrations
+  - Visual development environment for rapid AI prototyping
+- **PostgreSQL Database Initialization**: Automated database setup script
+  - Creates separate databases for n8n and Langflow with dedicated users
+  - Proper user permissions and ownership configuration
+  - Mounted via `postgres-init/init-databases.sql`
+
+### Changed
+- **PostgreSQL Password Security**: Migrated to Docker secrets
+  - Implemented `POSTGRES_PASSWORD_FILE` for superuser password
+  - Follows PostgreSQL 16+ best practices for secret management
+  - Eliminates hardcoded passwords in docker-compose.yml
+- **Environment Configuration Documentation**: Added comprehensive section
+  - Clarified purpose of `.env`, `env.sh`, and `.envrc` files
+  - Documented template vs. secrets separation strategy
+  - Follows 12-factor app methodology
+- **pgAdmin Credentials**: Updated default credentials for production use
+
 ## [0.2.0] - 2025-08-27
 
 ### Added
