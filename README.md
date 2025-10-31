@@ -109,19 +109,45 @@ Once your stack is running, you can access the following services:
 
 ## Environment Configuration
 
-This project uses multiple environment management approaches:
+This project uses a centralized architecture for managing environment files and secrets, following Docker best practices:
+
+### Centralized Architecture
+
+- **`/etc/LUMINAL/env.sh`**: Centralized environment configuration file (actual file location)
+  - **`env.sh`** in project root is a symlink pointing to `/etc/LUMINAL/env.sh`
+  - Excluded from git (tracked in `.gitignore`)
+  - Contains environment variable exports for local development
+  
+- **`/etc/LUMINAL/secrets/`**: Centralized secrets directory (actual directory location)
+  - **`secrets/`** in project root is a symlink pointing to `/etc/LUMINAL/secrets`
+  - Excluded from git (tracked in `.gitignore`)
+  - Contains sensitive credentials and keys managed via Docker Secrets
+
+### Environment Management Approaches
 
 - **`.env`**: Non-sensitive configuration variables (tracked in git as template)
-- **`env.sh`**: Shell script for loading secrets into environment (excluded from git - create locally from template)
+  - Used directly by Docker Compose
+  - Contains port numbers, service URLs, and non-sensitive settings
+  
+- **`env.sh`**: Shell script for loading secrets into environment (symlink to `/etc/LUMINAL/env.sh`)
+  - Used for local development and shell scripting
+  - Sources secrets from `/etc/LUMINAL/secrets/` directory
+  
 - **`.envrc`**: direnv configuration for automatic environment loading
-- **`secrets/`**: Sensitive credentials and keys (excluded from git)
+  - Automatically sources `env.sh` when entering the project directory
+  
+- **`secrets/`**: Symlink to `/etc/LUMINAL/secrets/` containing sensitive credentials
+  - Mounted into containers via Docker Secrets
+  - Secrets accessed via `/run/secrets/` in containers
+  
 - **`/etc/LUMINAL/config/`**: Service-specific configuration files
 
-**Note**: The `.env` file is included in the repository as a template. The `env.sh` file should be created locally by copying the `.env` structure or by sourcing secrets from the `secrets/` directory. When you clone this project, you should:
-1. Create your `env.sh` file locally (not committed to git)
-2. Update the `secrets/` directory with your own credentials
+**Note**: The `.env` file is included in the repository as a template. When you clone this project, you should:
+1. Create `/etc/LUMINAL/env.sh` with your environment variables (or use the symlink from project root)
+2. Update `/etc/LUMINAL/secrets/` with your own credentials
+3. The symlinks in the project root (`env.sh` and `secrets/`) will automatically point to the centralized locations
 
-These environment files help with local development but never contain sensitive information directly.
+This centralized approach ensures consistent configuration management across the system and aligns with industry best practices for Docker-based deployments.
 
 ## Technical Evolution
 
