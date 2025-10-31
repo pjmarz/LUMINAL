@@ -45,6 +45,7 @@ docker-compose.override.yml
 .envrc
 env.sh
 secrets/
+secrets
 
 # Additional security patterns
 *.key
