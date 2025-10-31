@@ -10,7 +10,7 @@ This platform integrates multiple cutting-edge technologies into a cohesive, con
 
 - **Workflow Automation**: n8n with custom AI nodes and integrations
 - **Visual AI Development**: Langflow for drag-and-drop AI workflow creation
-- **Data Persistence**: PostgreSQL with secure container configurations
+- **Data Persistence**: SQLite for lightweight, file-based storage
 - **AI Processing**:
   - Ollama with NVIDIA GPU acceleration for performant LLM inference
   - **OpenWebUI**: Self-hosted AI web interface with chat, RAG, and model management
@@ -87,7 +87,7 @@ Once your stack is running, you can access the following services:
 - **LangChain Integration**: Access to 600+ integrations from the LangChain ecosystem
 - **Ollama Integration**: Seamlessly use your local LLM models
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
-- **PostgreSQL Backend**: Persistent storage for your workflows and configurations
+- **SQLite Backend**: Lightweight file-based storage for workflows and configurations
 - **Qdrant Support**: Built-in vector database integration for RAG applications
 
 ### Getting Started with OpenWebUI
@@ -115,6 +115,7 @@ This project uses multiple environment management approaches:
 - **`env.sh`**: Shell script for loading secrets into environment (tracked in git as template)
 - **`.envrc`**: direnv configuration for automatic environment loading
 - **`secrets/`**: Sensitive credentials and keys (excluded from git)
+- **`/etc/LUMINAL/config/`**: Service-specific configuration files
 
 **Note**: The `.env` and `env.sh` files are included in the repository as templates. When you clone this project, you should update the `secrets/` directory with your own credentials. These environment files help with local development but never contain sensitive information directly.
 

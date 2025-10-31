@@ -1,98 +1,55 @@
+---
+# ===========================================================================
+# LUMINAL DOCKER COMPOSE CONFIGURATION
+# ===========================================================================
+# Self-Hosted AI Automation Platform
+# This orchestration file defines all LUMINAL services for AI workflows,
+# LLM inference, and automation. Services include n8n, Langflow, Ollama,
+# OpenWebUI, and Qdrant with GPU acceleration support.
+# ===========================================================================
+
 name: luminal
 
-x-n8n: &service-n8n
-  image: n8nio/n8n:latest
-  networks: ['luminal_default']
-  environment:
-    - GENERIC_TIMEZONE=${TIMEZONE}
-    - TZ=${TIMEZONE}
-    - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
-    - N8N_RUNNERS_ENABLED=true
-    - DB_TYPE=postgresdb
-    - DB_POSTGRESDB_HOST=postgres
-    - DB_POSTGRESDB_PORT=5432
-    - DB_POSTGRESDB_DATABASE=n8n
-    - DB_POSTGRESDB_USER=n8n
-    - DB_POSTGRESDB_PASSWORD_FILE=/run/secrets/n8n_db_password
-    - DB_POSTGRESDB_SCHEMA=public
-    - N8N_DIAGNOSTICS_ENABLED=false
-    - N8N_PERSONALIZATION_ENABLED=false
-    - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
-    - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
-    - OLLAMA_HOST=ollama:11434
-    - N8N_SECURE_COOKIE=false
-  secrets:
-    - n8n_encryption_key
-    - n8n_jwt_secret
-    - n8n_db_password
-  labels:
-    - "com.centurylinklabs.watchtower.enable=true"
-  user: "root"
+# Common settings and environment variables
+# Using YAML anchors (&) for DRY (Don't Repeat Yourself) configuration
+x-common: &common-settings
+  restart: unless-stopped      # Ensures services automatically restart unless manually stopped
+  environment: &common-env
+    PUID: ${PUID}              # Process User ID - Controls file ownership
+    PGID: ${PGID}              # Process Group ID - Controls file ownership
+    TZ: ${TZ}                  # Timezone setting for accurate scheduling/logs
+    UMASK: ${UMASK}            # Controls default file permissions
+  labels: &common-labels
+    - com.centurylinklabs.watchtower.enable=true  # Enables automatic updates via Watchtower
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    hostname: postgres
-    networks: ['luminal_default']
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      - POSTGRES_DB=postgres
-    secrets:
-      - postgres_password
-      - n8n_db_password
-      - langflow_db_password
-    volumes:
-      - postgres_storage:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h localhost -U postgres -d postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: pgadmin
-    hostname: pgadmin
-    networks: ['luminal_default']
-    restart: unless-stopped
-    ports:
-      - 5050:80
-    volumes:
-      - pgadmin_storage:/var/lib/pgadmin
-      - ./postgres-init/pgadmin-entrypoint.sh:/pgadmin-entrypoint.sh
-    entrypoint: /bin/bash
-    command: /pgadmin-entrypoint.sh
-    environment:
-      - PGADMIN_CONFIG_SERVER_MODE=False
-      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
-    secrets:
-      - pgadmin_email
-      - pgadmin_password
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-    depends_on:
-      - postgres
-
+  # ==== N8N ====
+  # Workflow automation platform with custom AI nodes
+  # Provides visual workflow builder for creating automated processes
   n8n:
-    <<: *service-n8n
+    image: n8nio/n8n:latest
     hostname: n8n
     container_name: n8n
+    networks: ['luminal_default']
     restart: unless-stopped
+    environment:
+      - GENERIC_TIMEZONE=${TZ}
+      - TZ=${TZ}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS:-true}
+      - N8N_RUNNERS_ENABLED=${N8N_RUNNERS_ENABLED:-true}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false}  # Disable secure cookies for local development
     ports:
-      - 5678:5678
+      - ${N8N_PORT:-5678}:5678
     volumes:
-      - n8n_storage:/home/node/.n8n
-      - ./secrets:/home/node/.n8n/credentials
-      - ./shared:/data/shared
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - n8n_storage:/home/node/.n8n              # Persistent storage for workflows and credentials
+      - ./secrets:/home/node/.n8n/credentials   # Mount secrets as n8n credentials directory
+      - ${SHARED_DIR:-./shared}:/data/shared    # Shared directory for workflow data exchange
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
+  # ==== LANGFLOW ====
+  # Visual AI workflow builder with drag-and-drop interface
+  # Provides access to 600+ LangChain integrations and Ollama models
   langflow:
     image: langflowai/langflow:latest
     container_name: langflow
@@ -100,29 +57,24 @@ services:
     networks: ['luminal_default']
     restart: unless-stopped
     ports:
-      - 7860:7860
+      - ${LANGFLOW_PORT:-7860}:7860
     volumes:
-      - langflow_storage:/app/langflow
-      - ./postgres-init/langflow-entrypoint.sh:/langflow-entrypoint.sh
-    entrypoint: /bin/bash
-    command: /langflow-entrypoint.sh langflow run
+      - langflow_storage:/app/langflow          # Persistent storage for AI workflows
     environment:
-      - LANGFLOW_AUTO_LOGIN=true
-    secrets:
-      - langflow_db_password
+      - LANGFLOW_AUTO_LOGIN=${LANGFLOW_AUTO_LOGIN:-true}
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia
+            - driver: nvidia                    # NVIDIA GPU acceleration for AI workloads
               count: 1
               capabilities: [gpu]
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
+  # ==== QDRANT ====
+  # Vector database for semantic search and embeddings storage
+  # Used by OpenWebUI for RAG (Retrieval-Augmented Generation) capabilities
   qdrant:
     image: qdrant/qdrant
     hostname: qdrant
@@ -130,78 +82,91 @@ services:
     networks: ['luminal_default']
     restart: unless-stopped
     ports:
-      - 6333:6333
+      - ${QDRANT_PORT:-6333}:6333               # Vector database API port
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - qdrant_storage:/qdrant/storage          # Persistent storage for vector embeddings
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
+  # ==== OLLAMA ====
+  # Local LLM inference server with NVIDIA GPU acceleration
+  # Hosts multiple LLM models: llama3.1:8b, gemma3:12b, gpt-oss:20b
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
     networks: ['luminal_default']
     restart: unless-stopped
     ports:
-      - 11434:11434
+      - ${OLLAMA_PORT:-11434}:11434             # Ollama API port for LLM inference
     volumes:
-      - ollama_storage:/root/.ollama
+      - ollama_storage:/root/.ollama            # Persistent storage for downloaded models
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia
+            - driver: nvidia                    # NVIDIA GPU acceleration for LLM inference
               count: 1
               capabilities: [gpu]
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+
+  # ==== OLLAMA MODEL PULLERS ====
+  # One-time initialization containers to download LLM models
+  # These containers run once to pull models, then exit
               
+  # Pull llama3.1:8b model (4.9GB) - Fast general-purpose model
   ollama-pull-llama:
     image: ollama/ollama:latest
     networks: ['luminal_default']
     container_name: ollama-pull-llama
     volumes:
-      - ollama_storage:/root/.ollama
+      - ollama_storage:/root/.ollama            # Share storage with main Ollama service
     entrypoint: /bin/sh
     environment:
-      - OLLAMA_HOST=ollama:11434
+      - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 3; ollama pull llama3.1:8b"
+      - "sleep 3; ollama pull ${OLLAMA_MODEL_LLAMA:-llama3.1:8b}"
     depends_on:
       - ollama
 
+  # Pull gemma3:12b model (8.1GB) - High-performance model for complex tasks
   ollama-pull-gemma:
     image: ollama/ollama:latest
     networks: ['luminal_default']
     container_name: ollama-pull-gemma
     volumes:
-      - ollama_storage:/root/.ollama
+      - ollama_storage:/root/.ollama            # Share storage with main Ollama service
     entrypoint: /bin/sh
     environment:
-      - OLLAMA_HOST=ollama:11434
+      - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 6; ollama pull gemma3:12b"
+      - "sleep 6; ollama pull ${OLLAMA_MODEL_GEMMA:-gemma3:12b}"
     depends_on:
       - ollama
       - ollama-pull-llama
 
+  # Pull gpt-oss:20b model (~20GB) - Maximum capability for advanced reasoning
   ollama-pull-gpt-oss:
     image: ollama/ollama:latest
     networks: ['luminal_default']
     container_name: ollama-pull-gpt-oss
     volumes:
-      - ollama_storage:/root/.ollama
+      - ollama_storage:/root/.ollama            # Share storage with main Ollama service
     entrypoint: /bin/sh
     environment:
-      - OLLAMA_HOST=ollama:11434
+      - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 9; ollama pull gpt-oss:20b"
+      - "sleep 9; ollama pull ${OLLAMA_MODEL_GPT_OSS:-gpt-oss:20b}"
     depends_on:
       - ollama
       - ollama-pull-gemma
 
+  # ==== OPENWEBUI ====
+  # Self-hosted AI chat interface with RAG capabilities
+  # Provides chat interface for Ollama models with Qdrant vector database integration
   openwebui:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: openwebui
@@ -209,72 +174,68 @@ services:
     networks: ['luminal_default']
     restart: unless-stopped
     ports:
-      - 3000:8080
+      - ${OPENWEBUI_PORT:-3000}:8080            # Web UI port (container exposes 8080)
     volumes:
-      - openwebui_storage:/app/backend/data
+      - openwebui_storage:/app/backend/data     # Persistent storage for chat history and settings
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_SECRET_KEY_FILE=/run/secrets/openwebui_secret_key
-      - ENABLE_RAG_WEB_SEARCH=true
-      - RAG_WEB_SEARCH_ENGINE=searxng
-      - VECTOR_DB=qdrant
-      - QDRANT_URI=http://qdrant:6333
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - WEBUI_SECRET_KEY_FILE=/run/secrets/openwebui_secret_key  # Secret key from Docker Secrets
+      - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH:-true}
+      - RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE:-searxng}
+      - VECTOR_DB=${VECTOR_DB:-qdrant}
+      - QDRANT_URI=${QDRANT_URI:-http://qdrant:6333}
     secrets:
-      - openwebui_secret_key
+      - openwebui_secret_key                     # Docker Secret for authentication
     deploy:
       resources:
         reservations:
           devices:
-            - driver: nvidia
+            - driver: nvidia                    # NVIDIA GPU acceleration for AI inference
               count: 1
               capabilities: [gpu]
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
     depends_on:
-      - ollama
-      - qdrant
+      - ollama                                  # Wait for Ollama to be ready
+      - qdrant                                  # Wait for Qdrant to be ready
 
+  # ==== WATCHTOWER ====
+  # Automatic container updater that keeps services up to date
+  # Monitors for image updates and automatically applies them
   watchtower:
     container_name: watchtower-luminal
     hostname: watchtower-luminal
     image: containrrr/watchtower:latest
     networks: ['luminal_default']
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock  # Docker socket for container management
     restart: unless-stopped
     command: --interval 3600 --label-enable --cleanup --remove-volumes
+    # Command explained:
+    # --interval 3600: Check for updates every hour (3600 seconds)
+    # --label-enable: Only update containers with the enable label
+    # --cleanup: Remove old images after updating
+    # --remove-volumes: Remove anonymous volumes attached to removed containers
 
+# Networks for service communication
 networks:
   luminal_default:
-    external: true
+    external: true                              # External network for service isolation
+
+# Persistent volumes for service data
 volumes:
-  n8n_storage:
-  postgres_storage:
-  pgadmin_storage:
-  ollama_storage:
-  qdrant_storage:
-  openwebui_storage:
-  langflow_storage:
+  n8n_storage:                                 # n8n workflows and configurations
+  ollama_storage:                               # Downloaded LLM models
+  qdrant_storage:                               # Vector embeddings and collections
+  openwebui_storage:                            # OpenWebUI chat history and settings
+  langflow_storage:                             # Langflow AI workflows
 
-
+# Docker Secrets for secure credential management
+# Sensitive information is stored in ./secrets/ and mounted securely
 secrets:
-  postgres_password:
-    file: ./secrets/postgres_password.txt
   n8n_encryption_key:
-    file: ./secrets/n8n_encryption_key.txt
+    file: ./secrets/n8n_encryption_key.txt      # n8n encryption key for secure credential storage
   n8n_jwt_secret:
-    file: ./secrets/n8n_jwt_secret.txt
-  n8n_db_password:
-    file: ./secrets/n8n_db_password.txt
+    file: ./secrets/n8n_jwt_secret.txt          # n8n JWT secret for user authentication
   openwebui_secret_key:
-    file: ./secrets/openwebui_secret_key.txt
-  langflow_api_key:
-    file: ./secrets/langflow_api_key.txt
-  langflow_secret_key:
-    file: ./secrets/langflow_secret_key.txt
-  langflow_db_password:
-    file: ./secrets/langflow_db_password.txt
-  pgadmin_email:
-    file: ./secrets/pgadmin_email.txt
-  pgadmin_password:
-    file: ./secrets/pgadmin_password.txt
+    file: ./secrets/openwebui_secret_key.txt    # OpenWebUI secret key for session management

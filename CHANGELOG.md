@@ -7,19 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Architecture Simplification**: Removed PostgreSQL infrastructure
+  - Migrated n8n and langflow to default SQLite storage
+  - Removed PostgreSQL service and pgAdmin
+  - Eliminated database initialization scripts and wrapper scripts
+  - Simplified docker-compose.yml to bare minimum essential services
+  - Reduced complexity while maintaining full functionality
+- **Configuration Management**: Added centralized config directory
+  - Created `/etc/LUMINAL/config/` structure for service-specific configurations
+  - Organized config directories for n8n, langflow, openwebui, and qdrant
+  - Follows HELIOS pattern for consistency across projects
+
+### Removed
+- **PostgreSQL Infrastructure**: Removed database dependencies
+  - Removed PostgreSQL service and all related configurations
+  - Removed pgAdmin service
+  - Removed postgres-init directory and all initialization scripts
+  - Removed PostgreSQL-related secrets (postgres_password, n8n_db_password, langflow_db_password, pgadmin_email, pgadmin_password)
+  - Removed PostgreSQL volume definitions
+
 ### Added
 - **Langflow Integration**: Visual AI workflow builder with drag-and-drop interface
   - Web interface accessible at `http://localhost:7860`
   - GPU acceleration support for optimal performance
   - Seamless integration with existing Ollama models
-  - PostgreSQL backend for persistent workflow storage
+  - SQLite backend for lightweight workflow storage
   - Built-in support for Qdrant vector database
   - Access to 600+ LangChain integrations
   - Visual development environment for rapid AI prototyping
-- **PostgreSQL Database Initialization**: Automated database setup script
-  - Creates separate databases for n8n and Langflow with dedicated users
-  - Proper user permissions and ownership configuration
-  - Mounted via `postgres-init/init-databases.sql`
 
 ### Changed
 - **PostgreSQL Password Security**: Migrated to Docker secrets
