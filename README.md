@@ -112,12 +112,16 @@ Once your stack is running, you can access the following services:
 This project uses multiple environment management approaches:
 
 - **`.env`**: Non-sensitive configuration variables (tracked in git as template)
-- **`env.sh`**: Shell script for loading secrets into environment (tracked in git as template)
+- **`env.sh`**: Shell script for loading secrets into environment (excluded from git - create locally from template)
 - **`.envrc`**: direnv configuration for automatic environment loading
 - **`secrets/`**: Sensitive credentials and keys (excluded from git)
 - **`/etc/LUMINAL/config/`**: Service-specific configuration files
 
-**Note**: The `.env` and `env.sh` files are included in the repository as templates. When you clone this project, you should update the `secrets/` directory with your own credentials. These environment files help with local development but never contain sensitive information directly.
+**Note**: The `.env` file is included in the repository as a template. The `env.sh` file should be created locally by copying the `.env` structure or by sourcing secrets from the `secrets/` directory. When you clone this project, you should:
+1. Create your `env.sh` file locally (not committed to git)
+2. Update the `secrets/` directory with your own credentials
+
+These environment files help with local development but never contain sensitive information directly.
 
 ## Technical Evolution
 
