@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/pjmarz/LUMINAL">
-    <h1>🚀 LUMINAL</h1>
+    <h1>LUMINAL</h1>
   </a>
 </div>
 
