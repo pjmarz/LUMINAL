@@ -14,52 +14,14 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
 
 ## 🛠️ System Components
 
-<table>
-  <thead>
-    <tr>
-      <th>Category</th>
-      <th colspan="2">Service</th>
-      <th>Purpose</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="3"><b>🤖 AI Services</b></td>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32" height="32" alt="n8n"></td>
-      <td><b><a href="https://github.com/n8n-io/n8n">n8n</a></b></td>
-      <td>Workflow Automation Platform</td>
-    </tr>
-    <tr>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="32" height="32" alt="OpenWebUI"></td>
-      <td><b><a href="https://github.com/open-webui/open-webui">OpenWebUI</a></b></td>
-      <td>AI Chat Interface with RAG</td>
-    </tr>
-
-    <tr>
-      <td rowspan="2"><b>🧠 AI Infrastructure</b></td>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama"></td>
-      <td><b><a href="https://github.com/ollama/ollama">Ollama</a></b></td>
-      <td>Local LLM Inference Server</td>
-    </tr>
-    <tr>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant"></td>
-      <td><b><a href="https://github.com/qdrant/qdrant">Qdrant</a></b></td>
-      <td>Vector Database for Semantic Search</td>
-    </tr>
-    <tr>
-      <td><b>🏠 Home Automation</b></td>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="32" height="32" alt="Home Assistant"></td>
-      <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
-      <td>Home Automation Platform with AI Integration</td>
-    </tr>
-    <tr>
-      <td><b>🔧 Infrastructure</b></td>
-      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="36" height="24" alt="Docker"></td>
-      <td><b><a href="https://www.docker.com/">Docker</a></b></td>
-      <td>Containerization Platform</td>
-    </tr>
-  </tbody>
-</table>
+| Category | Service | Purpose |
+| :--- | :--- | :--- |
+| **🤖 AI Services** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="20" height="20" alt="n8n"/> **[n8n](https://github.com/n8n-io/n8n)** | Workflow Automation Platform |
+| | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="20" height="20" alt="OpenWebUI"/> **[OpenWebUI](https://github.com/open-webui/open-webui)** | AI Chat Interface with RAG |
+| **🧠 AI Infrastructure** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="20" height="20" alt="Ollama"/> **[Ollama](https://github.com/ollama/ollama)** | Local LLM Inference Server |
+| | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="20" height="20" alt="Qdrant"/> **[Qdrant](https://github.com/qdrant/qdrant)** | Vector Database for Semantic Search |
+| **🏠 Home Automation** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="20" height="20" alt="Home Assistant"/> **[Home Assistant](https://www.home-assistant.io/)** | Home Automation Platform with AI Integration |
+| **🔧 Infrastructure** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="24" height="18" alt="Docker"/> **[Docker](https://www.docker.com/)** | Containerization Platform |
 
 ## ✅ Prerequisites (for reference only)
 
