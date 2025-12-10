@@ -14,14 +14,50 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
 
 ## 🛠️ System Components
 
-| Category | Service | Purpose |
-| :--- | :--- | :--- |
-| **🤖 AI Services** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="20" height="20" alt="n8n"/> **[n8n](https://github.com/n8n-io/n8n)** | Workflow Automation Platform |
-| | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="20" height="20" alt="OpenWebUI"/> **[OpenWebUI](https://github.com/open-webui/open-webui)** | AI Chat Interface with RAG |
-| **🧠 AI Infrastructure** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="20" height="20" alt="Ollama"/> **[Ollama](https://github.com/ollama/ollama)** | Local LLM Inference Server |
-| | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="20" height="20" alt="Qdrant"/> **[Qdrant](https://github.com/qdrant/qdrant)** | Vector Database for Semantic Search |
-| **🏠 Home Automation** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="20" height="20" alt="Home Assistant"/> **[Home Assistant](https://www.home-assistant.io/)** | Home Automation Platform with AI Integration |
-| **🔧 Infrastructure** | <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="24" height="18" alt="Docker"/> **[Docker](https://www.docker.com/)** | Containerization Platform |
+<table>
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th colspan="2">Service</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="3"><b>🤖 AI Services</b></td>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32" height="32" alt="n8n"></td>
+      <td><b><a href="https://github.com/n8n-io/n8n">n8n</a></b></td>
+      <td>Workflow Automation Platform</td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="32" height="32" alt="OpenWebUI"></td>
+      <td><b><a href="https://github.com/open-webui/open-webui">OpenWebUI</a></b></td>
+      <td>AI Chat Interface with RAG</td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama"></td>
+      <td><b><a href="https://github.com/ollama/ollama">Ollama</a></b></td>
+      <td>Local LLM Inference Server</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><b>🧠 AI Infrastructure</b></td>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant"></td>
+      <td><b><a href="https://github.com/qdrant/qdrant">Qdrant</a></b></td>
+      <td>Vector Database for Semantic Search</td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="36" height="24" alt="Docker"></td>
+      <td><b><a href="https://www.docker.com/">Docker</a></b></td>
+      <td>Containerization Platform</td>
+    </tr>
+    <tr>
+      <td rowspan="1"><b>🏠 Home Automation</b></td>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="32" height="32" alt="Home Assistant"></td>
+      <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
+      <td>Home Automation Platform</td>
+    </tr>
+  </tbody>
+</table>
 
 ## ✅ Prerequisites (for reference only)
 
@@ -80,6 +116,22 @@ The symlinks in the project root (`env.sh` and `secrets/`) will automatically po
 
 This centralized approach ensures consistent configuration management across the system and aligns with industry best practices for Docker-based deployments.
 
+## 💾 Storage Configuration
+
+LUMINAL uses Docker Named Volumes for all persistent data storage, ensuring separation of data from the container lifecycle.
+
+### Storage Architecture
+
+- **`luminal_n8n_storage`**: Stores n8n workflows, credentials, and execution data.
+- **`luminal_ollama_storage`**: caches downloaded LLM models (approx. 40GB+ for full model set).
+- **`luminal_qdrant_storage`**: Stores vector embeddings and database indices.
+- **`luminal_openwebui_storage`**: Persists chat history, user settings, and document knowledge base.
+- **`luminal_homeassistant_storage`**: Stores Home Assistant configuration (`configuration.yaml`, database).
+
+### File Ownership
+
+- **PUID/PGID**: All services are configured to run with specific user/group IDs (defined in `.env`) to ensure file permissions on mounted volumes match the host system user.
+
 ## 🚀 Quickstart (for reference only)
 
 ```bash
@@ -98,47 +150,17 @@ docker compose down
 Once your stack is running, you can access the following services:
 
 - **n8n Workflow Automation**: http://localhost:5678
-
 - **OpenWebUI AI Interface**: http://localhost:3000
 - **Home Assistant**: http://localhost:8123
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **Ollama API**: http://localhost:11434
 
-
-### Getting Started with OpenWebUI
-
-1. Visit http://localhost:3000 in your browser
-2. Create your first admin account
-3. Navigate to Settings → Models to verify your Ollama models are detected
-4. Start chatting with your AI models!
-
 ### Key OpenWebUI Features
 
 - **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma3:12b, and gpt-oss:20b
-  - **llama3.1:8b** (4.9GB) - Fast and capable general-purpose model
-  - **gemma3:12b** (8.1GB) - High-performance model for complex tasks
-  - **gpt-oss:20b** (~20GB) - Maximum capability for advanced reasoning
 - **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
 - **Secure Authentication**: JWT-based authentication with secure secret keys
-
-### Getting Started with Home Assistant
-
-1. Visit http://localhost:8123 in your browser
-2. Complete the initial setup wizard to create your admin account
-3. Home Assistant will automatically discover devices on your network (Lifx bulbs, Ring cameras, Amazon Echos, Apple TV, etc.)
-4. Navigate to Settings → Devices & Services to configure integrations
-5. Create a long-lived access token (Settings → Devices & Services → Long-Lived Access Tokens) for n8n integration
-
-### Key Home Assistant Features
-
-- **Automatic Device Discovery**: Host network mode enables mDNS/Bonjour discovery for WiFi devices
-- **AI Integration**: Bidirectional integration with n8n for AI-powered automations
-  - **Home Assistant → n8n**: Trigger n8n workflows from home events (motion sensors, device states, etc.)
-  - **n8n → Home Assistant**: Control devices via REST API from AI workflows
-  - **Natural Language Control**: Use OpenWebUI to chat with AI, which controls Home Assistant via n8n
-- **Intelligent Automation**: Combine Home Assistant events with Ollama AI reasoning for smart decision-making
-- **Predictive Automation**: AI analyzes patterns and triggers proactive home automation workflows
 
 ### AI-Powered Home Automation Examples
 
@@ -166,50 +188,15 @@ LUMINAL follows Docker best practices for configuration directory ownership:
 - **Rationale**: Ensures container-created files have consistent ownership
 - **Benefits**: Prevents permission issues, aligns with Docker ecosystem standards
 
-The project implements:
-- Containerized AI services using Docker and Docker Compose
-- Docker Secrets for secure management of sensitive information
-- NVIDIA GPU acceleration for LLM inference and AI workloads
-- Centralized configuration management following industry best practices
-- Resource-efficient container orchestration
-- Advanced AI workflow automation with visual development tools
-- Vector database integration for RAG capabilities
-
-## 🔧 System Architecture
-
-Key architectural features:
-- Multi-service AI application design
-- Scalable workflow automation platform
-- GPU-accelerated LLM inference
-- Vector database for semantic search
-- Secure network isolation
-- Efficient resource allocation
-
 ## 🧠 AI Models
 
 LUMINAL supports three LLM models via Ollama:
 
 - **llama3.1:8b** (4.9GB) - Fast and capable general-purpose model
-  - Ideal for quick responses and general-purpose tasks
-  - Best for: Conversational AI, general workflows, rapid prototyping
-  
 - **gemma3:12b** (8.1GB) - High-performance model for complex tasks
-  - Enhanced reasoning capabilities
-  - Best for: Complex analysis, detailed explanations, advanced reasoning
-  
 - **gpt-oss:20b** (~20GB) - Maximum capability for advanced reasoning
-  - Highest quality outputs and reasoning
-  - Best for: Advanced research, complex problem-solving, maximum quality requirements
 
 Models are automatically pulled on first startup and cached in the `ollama_storage` volume.
-
-## 🛠️ Maintenance
-
-- Service orchestration (start/stop/refresh all containers)
-- Model management through Ollama API
-- Workflow backup and restoration in n8n
-- Docker service maintenance and recovery
-- Centralized logging and monitoring
 
 ## 📚 Technical Skills Demonstrated
 
