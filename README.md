@@ -34,11 +34,7 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
       <td><b><a href="https://github.com/open-webui/open-webui">OpenWebUI</a></b></td>
       <td>AI Chat Interface with RAG</td>
     </tr>
-    <tr>
-      <td align="center"><img src="https://raw.githubusercontent.com/langflow-ai/langflow/refs/heads/main/src/frontend/src/assets/LangflowLogoColor.svg" width="32" height="32" alt="Langflow"></td>
-      <td><b><a href="https://github.com/langflow-ai/langflow">Langflow</a></b></td>
-      <td>Visual AI Workflow Builder</td>
-    </tr>
+
     <tr>
       <td rowspan="2"><b>🧠 AI Infrastructure</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama"></td>
@@ -49,6 +45,12 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant"></td>
       <td><b><a href="https://github.com/qdrant/qdrant">Qdrant</a></b></td>
       <td>Vector Database for Semantic Search</td>
+    </tr>
+    <tr>
+      <td><b>🏠 Home Automation</b></td>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="32" height="32" alt="Home Assistant"></td>
+      <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
+      <td>Home Automation Platform with AI Integration</td>
     </tr>
     <tr>
       <td><b>🔧 Infrastructure</b></td>
@@ -134,24 +136,12 @@ docker compose down
 Once your stack is running, you can access the following services:
 
 - **n8n Workflow Automation**: http://localhost:5678
-- **Langflow Visual AI Builder**: http://localhost:7860
+
 - **OpenWebUI AI Interface**: http://localhost:3000
+- **Home Assistant**: http://localhost:8123
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **Ollama API**: http://localhost:11434
 
-### Getting Started with Langflow
-
-1. Visit http://localhost:7860 in your browser
-2. Create your first workflow using the drag-and-drop interface
-3. Langflow automatically detects your Ollama models (llama3.1:8b, gemma3:12b, gpt-oss:20b)
-4. Build visual AI workflows with LangChain components!
-
-### Key Langflow Features
-
-- **Visual Workflow Builder**: Drag-and-drop interface for creating AI applications
-- **LangChain Integration**: Access to 600+ integrations from the LangChain ecosystem
-- **Ollama Integration**: Seamlessly use your local LLM models
-- **GPU Acceleration**: Direct GPU passthrough for optimal performance
 
 ### Getting Started with OpenWebUI
 
@@ -170,6 +160,30 @@ Once your stack is running, you can access the following services:
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
 - **Secure Authentication**: JWT-based authentication with secure secret keys
 
+### Getting Started with Home Assistant
+
+1. Visit http://localhost:8123 in your browser
+2. Complete the initial setup wizard to create your admin account
+3. Home Assistant will automatically discover devices on your network (Lifx bulbs, Ring cameras, Amazon Echos, Apple TV, etc.)
+4. Navigate to Settings → Devices & Services to configure integrations
+5. Create a long-lived access token (Settings → Devices & Services → Long-Lived Access Tokens) for n8n integration
+
+### Key Home Assistant Features
+
+- **Automatic Device Discovery**: Host network mode enables mDNS/Bonjour discovery for WiFi devices
+- **AI Integration**: Bidirectional integration with n8n for AI-powered automations
+  - **Home Assistant → n8n**: Trigger n8n workflows from home events (motion sensors, device states, etc.)
+  - **n8n → Home Assistant**: Control devices via REST API from AI workflows
+  - **Natural Language Control**: Use OpenWebUI to chat with AI, which controls Home Assistant via n8n
+- **Intelligent Automation**: Combine Home Assistant events with Ollama AI reasoning for smart decision-making
+- **Predictive Automation**: AI analyzes patterns and triggers proactive home automation workflows
+
+### AI-Powered Home Automation Examples
+
+- **Natural Language Control**: Chat with OpenWebUI → n8n processes request → Home Assistant executes device control
+- **Intelligent Automation**: Motion sensor triggers → n8n workflow → AI analyzes with Ollama → Smart response via Home Assistant
+- **Predictive Automation**: AI analyzes usage patterns → n8n workflows → Proactive home automation via Home Assistant
+
 ## 🧩 Architecture & Configuration
 
 - Single project name: `luminal`
@@ -177,7 +191,7 @@ Once your stack is running, you can access the following services:
   - `luminal_default`: Main application network (all AI services)
 - Secrets stored in `/etc/LUMINAL/secrets/` (centralized location, symlinked from project root)
 - Environment variables centralized at `/etc/LUMINAL/env.sh` (symlinked from project root)
-- NVIDIA GPU passthrough for accelerated AI workloads (Ollama, Langflow, OpenWebUI)
+- NVIDIA GPU passthrough for accelerated AI workloads (Ollama, OpenWebUI)
 
 ## 💡 Implementation Details
 
