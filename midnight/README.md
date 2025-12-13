@@ -12,6 +12,7 @@ Midnight is a collection of OpenWebUI tools that let you query your HELIOS media
 | `midnight_bazarr.py` | Bazarr | Subtitle status, missing, history |
 | `midnight_tautulli.py` | Tautulli | Who's watching, history, stats |
 | `midnight_sabnzbd.py` | SABnzbd | Download queue, history |
+| `midnight_overseerr.py` | Overseerr | **Request movies/TV**, search for new content, view requests |
 
 ## Installation
 
@@ -33,7 +34,8 @@ After adding each tool, click the ⚙️ gear icon to configure:
 | Plex | `PLEX_URL`, `PLEX_TOKEN` |
 | Bazarr | `BAZARR_URL`, `BAZARR_API_KEY` |
 | Tautulli | `TAUTULLI_URL`, `TAUTULLI_API_KEY` |
-| Downloads | `SABNZBD_URL`, `SABNZBD_API_KEY` |
+| SABnzbd | `SABNZBD_URL`, `SABNZBD_API_KEY` |
+| Overseerr | `OVERSEERR_URL`, `OVERSEERR_API_KEY` |
 
 **Default URLs** (for HELIOS at 192.168.4.46):
 - Radarr: `http://192.168.4.46:7878`
@@ -41,6 +43,7 @@ After adding each tool, click the ⚙️ gear icon to configure:
 - Plex: `http://192.168.4.46:32400`
 - Bazarr: `http://192.168.4.46:6767`
 - Tautulli: `http://192.168.4.46:8181`
+- Overseerr: `http://192.168.4.46:5055`
 - SABnzbd: `http://192.168.4.46:8080`
 
 **API Keys** are stored in `/etc/HELIOS/secrets/` on the HELIOS server.
@@ -102,6 +105,13 @@ You are Midnight, a friendly media library assistant. You have tools that query 
 ### midnight_sabnzbd_tool (Downloads)
 - **get_download_queue()**: Current downloads in progress
 - **get_download_history()**: Completed downloads
+
+### midnight_overseerr_tool (Requests)
+- **search_to_request(query)**: Search for movies/TV shows to request (not in library yet)
+- **request_movie(tmdb_id)**: Submit a request for a movie
+- **request_tv(tmdb_id, seasons)**: Submit a request for a TV show
+- **get_pending_requests()**: View pending requests awaiting fulfillment
+- **get_recent_requests()**: View recent request history
 
 ## CRITICAL RULES
 
