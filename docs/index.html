@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,17 +18,17 @@
             --body-bg: #121212;
             --muted-color: #a0a0a0;
         }
-        
+
         html {
             scroll-behavior: smooth;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--body-bg);
             color: var(--text-color);
         }
-        
+
         /* Animated gradient background for hero */
         .hero {
             background: linear-gradient(-45deg, var(--primary-color), #2c3e50, #34495e, var(--ai-color));
@@ -37,19 +38,21 @@
             padding: 3rem 0;
             margin-bottom: 2rem;
         }
-        
+
         @keyframes gradient {
             0% {
                 background-position: 0% 50%;
             }
+
             50% {
                 background-position: 100% 50%;
             }
+
             100% {
                 background-position: 0% 50%;
             }
         }
-        
+
         /* Animated icons in features section */
         .feature-icon {
             font-size: 2.5rem;
@@ -57,12 +60,12 @@
             margin-bottom: 1rem;
             transition: transform 0.3s ease, color 0.3s ease;
         }
-        
+
         .feature-icon:hover {
             transform: scale(1.2);
             color: var(--secondary-color);
         }
-        
+
         /* Card hover effects */
         .service-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -72,7 +75,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .service-card::before {
             content: '';
             position: absolute;
@@ -84,16 +87,16 @@
             transform: translateX(-100%);
             transition: transform 0.6s ease;
         }
-        
+
         .service-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(155, 89, 182, 0.2);
         }
-        
+
         .service-card:hover::before {
             transform: translateX(100%);
         }
-        
+
         /* Service icon hover effects */
         .service-card img {
             width: 32px;
@@ -101,20 +104,20 @@
             object-fit: contain;
             transition: transform 0.3s ease;
         }
-        
+
         .service-card:hover img {
             transform: scale(1.1);
         }
-        
+
         /* Link hover effects */
         .text-white {
             transition: color 0.3s ease;
         }
-        
+
         .text-white:hover {
             color: var(--ai-color) !important;
         }
-        
+
         /* Scroll to top button */
         .scroll-top {
             position: fixed;
@@ -134,64 +137,64 @@
             transform: translateY(100px);
             z-index: 1000;
         }
-        
+
         .scroll-top.visible {
             opacity: 1;
             transform: translateY(0);
         }
-        
+
         .scroll-top:hover {
             transform: translateY(-5px);
             color: white;
         }
-        
+
         .text-muted {
             color: var(--muted-color) !important;
         }
-        
+
         .hero-content {
             padding: 2rem 0;
         }
-        
+
         .navbar {
             background-color: var(--primary-color) !important;
             transition: background-color 0.3s ease;
         }
-        
+
         .navbar.scrolled {
             background-color: rgba(26, 26, 26, 0.95) !important;
             backdrop-filter: blur(10px);
         }
-        
+
         .card {
             background-color: var(--card-bg);
             color: var(--text-color);
             border: 1px solid #404040;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
+
         .card:hover {
             transform: scale(1.05);
             box-shadow: 0 5px 15px rgba(155, 89, 182, 0.2);
         }
-        
+
         .bg-light {
             background-color: #1a1a1a !important;
         }
-        
+
         .btn-light {
             background-color: #404040;
             color: white;
             border: none;
             transition: all 0.3s ease;
         }
-        
+
         .btn-light:hover {
             background-color: var(--ai-color);
             color: white;
             transform: translateY(-2px);
         }
-        
+
         .model-badge {
             background: linear-gradient(135deg, var(--ai-color), var(--secondary-color));
             padding: 0.5rem 1rem;
@@ -200,7 +203,7 @@
             margin: 0.25rem;
             font-size: 0.9rem;
         }
-        
+
         .service-url {
             font-family: 'Consolas', monospace;
             color: var(--secondary-color);
@@ -210,6 +213,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
@@ -239,10 +243,12 @@
         </div>
     </nav>
     <div class="container mt-3">
-      <div class="alert alert-warning text-center" role="alert">
-        <strong>Showcase:</strong> This repository demonstrates LUMINAL and is not intended to be cloned or deployed as-is. See the README and Changelog for details.
-        <a href="https://github.com/pjmarz/LUMINAL#readme" class="ms-2">README</a> · <a href="https://github.com/pjmarz/LUMINAL/blob/main/CHANGELOG.md">Changelog</a>
-      </div>
+        <div class="alert alert-warning text-center" role="alert">
+            <strong>Showcase:</strong> This repository demonstrates LUMINAL and is not intended to be cloned or deployed
+            as-is. See the README and Changelog for details.
+            <a href="https://github.com/pjmarz/LUMINAL#readme" class="ms-2">README</a> · <a
+                href="https://github.com/pjmarz/LUMINAL/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
     </div>
 
     <!-- Hero Section -->
@@ -250,7 +256,8 @@
         <div class="container text-center hero-content">
             <h1 class="display-3 mb-3">🚀 LUMINAL</h1>
             <p class="lead">Self-Hosted AI Automation Platform</p>
-            <p class="text-white-50">Workflow automation, visual AI development, and LLM inference in one containerized environment</p>
+            <p class="text-white-50">Workflow automation, visual AI development, and LLM inference in one containerized
+                environment</p>
         </div>
     </section>
 
@@ -262,13 +269,15 @@
                 <div class="col-md-4 text-center">
                     <i class="bi bi-diagram-3 feature-icon"></i>
                     <h3>Workflow Automation</h3>
-                    <p>Visual workflow builder with n8n for creating automated processes with custom AI nodes and integrations.</p>
+                    <p>Visual workflow builder with n8n for creating automated processes with custom AI nodes and
+                        integrations.</p>
                 </div>
 
                 <div class="col-md-4 text-center">
                     <i class="bi bi-shield-check feature-icon"></i>
                     <h3>Secure & Optimized</h3>
-                    <p>Built on Docker with NVIDIA GPU acceleration, Docker Secrets for secure credential management, and comprehensive API connectivity monitoring for all services.</p>
+                    <p>Built on Docker with NVIDIA GPU acceleration, Docker Secrets for secure credential management,
+                        and comprehensive API connectivity monitoring for all services.</p>
                 </div>
             </div>
         </div>
@@ -284,24 +293,30 @@
                         <div class="card-body">
                             <h5 class="card-title mb-4">🤖 AI Services</h5>
                             <div class="d-flex align-items-center mb-3">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32" height="32" alt="n8n" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32"
+                                    height="32" alt="n8n" class="me-3">
                                 <div>
-                                    <a href="https://github.com/n8n-io/n8n" class="text-white text-decoration-none">n8n</a>
+                                    <a href="https://github.com/n8n-io/n8n"
+                                        class="text-white text-decoration-none">n8n</a>
                                     <small class="d-block text-muted">Workflow Automation Platform</small>
                                 </div>
                             </div>
 
                             <div class="d-flex align-items-center mb-3">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="32" height="32" alt="OpenWebUI" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png"
+                                    width="32" height="32" alt="OpenWebUI" class="me-3">
                                 <div>
-                                    <a href="https://github.com/open-webui/open-webui" class="text-white text-decoration-none">OpenWebUI</a>
-                                    <small class="d-block text-muted">AI Chat Interface with RAG</small>
+                                    <a href="https://github.com/open-webui/open-webui"
+                                        class="text-white text-decoration-none">OpenWebUI</a>
+                                    <small class="d-block text-muted">AI Chat + Plexy Media Assistant</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png"
+                                    width="32" height="32" alt="Ollama" class="me-3">
                                 <div>
-                                    <a href="https://github.com/ollama/ollama" class="text-white text-decoration-none">Ollama</a>
+                                    <a href="https://github.com/ollama/ollama"
+                                        class="text-white text-decoration-none">Ollama</a>
                                     <small class="d-block text-muted">Local LLM Inference Server</small>
                                 </div>
                             </div>
@@ -313,21 +328,25 @@
                         <div class="card-body">
                             <h5 class="card-title mb-4">🔧 Infrastructure</h5>
                             <div class="d-flex align-items-center mb-3">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png"
+                                    width="32" height="32" alt="Qdrant" class="me-3">
                                 <div>
-                                    <a href="https://github.com/qdrant/qdrant" class="text-white text-decoration-none">Qdrant</a>
+                                    <a href="https://github.com/qdrant/qdrant"
+                                        class="text-white text-decoration-none">Qdrant</a>
                                     <small class="d-block text-muted">Vector Database for Semantic Search</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center mb-3">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="32" height="32" alt="Docker" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png"
+                                    width="32" height="32" alt="Docker" class="me-3">
                                 <div>
                                     <a href="https://www.docker.com/" class="text-white text-decoration-none">Docker</a>
                                     <small class="d-block text-muted">Containerization Platform</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-gpu-card me-3" style="font-size: 1.5rem; color: var(--secondary-color);"></i>
+                                <i class="bi bi-gpu-card me-3"
+                                    style="font-size: 1.5rem; color: var(--secondary-color);"></i>
                                 <div>
                                     <strong class="text-white">NVIDIA GPU</strong>
                                     <small class="d-block text-muted">GPU Acceleration for AI Workloads</small>
@@ -348,7 +367,8 @@
                 <div class="col-md-4">
                     <div class="card service-card">
                         <div class="card-body text-center">
-                            <i class="bi bi-robot" style="font-size: 3rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-robot"
+                                style="font-size: 3rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
                             <h4>llama3.1:8b</h4>
                             <p class="text-muted">4.9 GB</p>
                             <p>Fast and capable general-purpose model</p>
@@ -359,7 +379,8 @@
                 <div class="col-md-4">
                     <div class="card service-card">
                         <div class="card-body text-center">
-                            <i class="bi bi-cpu" style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-cpu"
+                                style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
                             <h4>gemma3:12b</h4>
                             <p class="text-muted">8.1 GB</p>
                             <p>High-performance model for complex tasks</p>
@@ -370,7 +391,8 @@
                 <div class="col-md-4">
                     <div class="card service-card">
                         <div class="card-body text-center">
-                            <i class="bi bi-rocket" style="font-size: 3rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-rocket"
+                                style="font-size: 3rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
                             <h4>gpt-oss:20b</h4>
                             <p class="text-muted">~20 GB</p>
                             <p>Maximum capability for advanced reasoning</p>
@@ -400,9 +422,9 @@
                 <div class="col-md-6 col-lg-4 mb-4">
                     <div class="card service-card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">OpenWebUI</h5>
+                            <h5 class="card-title">OpenWebUI + Plexy</h5>
                             <p class="service-url">http://localhost:3000</p>
-                            <p class="card-text">AI chat interface with RAG and model management</p>
+                            <p class="card-text">AI chat interface with Plexy media library assistant</p>
                         </div>
                     </div>
                 </div>
@@ -436,7 +458,8 @@
                 <div class="col-md-3 mb-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <i class="bi bi-server" style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-server"
+                                style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
                             <h6>Infrastructure & DevOps</h6>
                             <p class="small text-muted">Docker, GPU acceleration, container orchestration</p>
                         </div>
@@ -445,7 +468,8 @@
                 <div class="col-md-3 mb-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <i class="bi bi-brain" style="font-size: 2rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-brain"
+                                style="font-size: 2rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
                             <h6>AI & Data Engineering</h6>
                             <p class="small text-muted">LLM deployment, vector databases, AI workflows</p>
                         </div>
@@ -454,7 +478,8 @@
                 <div class="col-md-3 mb-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <i class="bi bi-shield-lock" style="font-size: 2rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-shield-lock"
+                                style="font-size: 2rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
                             <h6>Security Engineering</h6>
                             <p class="small text-muted">Docker Secrets, secure configurations</p>
                         </div>
@@ -463,7 +488,8 @@
                 <div class="col-md-3 mb-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <i class="bi bi-diagram-3" style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
+                            <i class="bi bi-diagram-3"
+                                style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
                             <h6>System Architecture</h6>
                             <p class="small text-muted">Multi-service design, scalability</p>
                         </div>
@@ -485,7 +511,7 @@
             <p class="mt-2">
                 <a href="https://github.com/pjmarz/LUMINAL" class="text-white text-decoration-none">
                     <i class="bi bi-github"></i> GitHub
-                </a> · 
+                </a> ·
                 <a href="https://pjmarz.github.io/LUMINAL/" class="text-white text-decoration-none">
                     <i class="bi bi-globe"></i> Website
                 </a>
@@ -500,7 +526,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Navbar color change on scroll
-        window.addEventListener('scroll', function() {
+        window.addEventListener('scroll', function () {
             if (window.scrollY > 50) {
                 document.querySelector('.navbar').classList.add('scrolled');
             } else {
@@ -509,7 +535,7 @@
         });
 
         // Scroll to top button
-        window.addEventListener('scroll', function() {
+        window.addEventListener('scroll', function () {
             const scrollBtn = document.querySelector('.scroll-top');
             if (window.scrollY > 300) {
                 scrollBtn.classList.add('visible');
@@ -519,4 +545,5 @@
         });
     </script>
 </body>
+
 </html>

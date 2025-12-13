@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Plexy Media Assistant**: OpenWebUI-based media library assistant (v1.2.0)
+  - 6 custom Python tools for Plex, Radarr, Sonarr, Bazarr, Tautulli, SABnzbd integration
+  - Actor and director search with fuzzy matching for typo tolerance
+  - Genre search with 30+ synonym mappings (sci-fi → Science Fiction, etc.)
+  - Movie/TV show details: synopsis, runtime, ratings, file info
+  - Real-time activity monitoring, watch history, download status
+  - Conceptual system prompt for reliable tool routing
+  - Recommended base model: gemma3:12b for optimal performance
+  - Anti-hallucination rules to ensure accurate responses
+
 - **direnv Integration**: Automatic environment variable loading
   - Added `.envrc` file for automatic `.env` and `env.sh` loading
   - Configured direnv hook for seamless environment isolation
