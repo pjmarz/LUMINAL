@@ -2,7 +2,7 @@
 title: Midnight Overseerr Tool
 description: Media request management via Overseerr for Midnight
 author: Peter Marino
-version: 1.0.0
+version: 1.1.0
 """
 
 import requests
@@ -178,9 +178,27 @@ class Tools:
         
         for req in results:
             media = req.get("media", {})
-            title = media.get("title") or media.get("name", "Unknown")
             media_type = req.get("type", "unknown")
             type_emoji = "🎬" if media_type == "movie" else "📺"
+            
+            # Get title from the correct field
+            # Overseerr stores it in media.externalServiceId or we need to fetch from tmdb
+            tmdb_id = media.get("tmdbId")
+            
+            # Try to get title from media info first
+            title = None
+            media_info = media.get("mediaInfo") or {}
+            if not title and tmdb_id:
+                # Fetch from movie or tv endpoint
+                if media_type == "movie":
+                    details = self._make_request(f"/movie/{tmdb_id}")
+                    title = details.get("title", "Unknown")
+                else:
+                    details = self._make_request(f"/tv/{tmdb_id}")
+                    title = details.get("name", "Unknown")
+            
+            if not title:
+                title = "Unknown"
             
             requested_by = req.get("requestedBy", {}).get("displayName", "Unknown")
             created = req.get("createdAt", "")[:10] if req.get("createdAt") else "N/A"
@@ -215,9 +233,22 @@ class Tools:
         
         for req in results:
             media = req.get("media", {})
-            title = media.get("title") or media.get("name", "Unknown")
             media_type = req.get("type", "unknown")
             type_emoji = "🎬" if media_type == "movie" else "📺"
+            
+            # Get title from the TMDB endpoint
+            tmdb_id = media.get("tmdbId")
+            title = None
+            if tmdb_id:
+                if media_type == "movie":
+                    details = self._make_request(f"/movie/{tmdb_id}")
+                    title = details.get("title", "Unknown")
+                else:
+                    details = self._make_request(f"/tv/{tmdb_id}")
+                    title = details.get("name", "Unknown")
+            
+            if not title:
+                title = "Unknown"
             
             requested_by = req.get("requestedBy", {}).get("displayName", "Unknown")
             created = req.get("createdAt", "")[:10] if req.get("createdAt") else "N/A"

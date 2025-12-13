@@ -159,7 +159,7 @@ Once your stack is running, you can access the following services:
 
 - **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma3:12b, and gpt-oss:20b
 - **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
-- **Midnight Media Assistant**: Natural language interface to query Plex library, actor/director searches, watch history, and more
+- **Midnight Media Assistant**: Natural language interface to query Plex library, actor/director searches, watch history, and request new content via Overseerr
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
 - **Secure Authentication**: JWT-based authentication with secure secret keys
 
