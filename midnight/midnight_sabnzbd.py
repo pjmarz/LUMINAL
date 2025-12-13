@@ -1,6 +1,6 @@
 """
-title: Plexy SABnzbd Tool
-description: Download queue and history via SABnzbd for Plexy
+title: Midnight SABnzbd Tool
+description: Download queue and history via SABnzbd for Midnight
 author: Peter Marino
 version: 1.2.0
 """
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """SABnzbd download management tools for Plexy."""
+    """SABnzbd download management tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for SABnzbd API connection."""

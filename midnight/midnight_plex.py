@@ -1,5 +1,5 @@
 """
-title: Plexy Plex Tool
+title: Midnight Plex Tool
 description: Unified search and library access for Plex Media Server
 author: Peter Marino
 version: 1.2.0
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Plex Media Server tools for Plexy."""
+    """Plex Media Server tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for Plex API connection."""

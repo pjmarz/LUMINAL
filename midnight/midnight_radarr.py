@@ -1,6 +1,6 @@
 """
-title: Plexy Radarr Tool
-description: Search and query movies from Radarr for the Plexy media assistant
+title: Midnight Radarr Tool
+description: Search and query movies from Radarr for the Midnight media assistant
 author: Peter Marino
 version: 1.2.0
 """
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Radarr movie library tools for Plexy."""
+    """Radarr movie library tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for Radarr API connection."""
@@ -68,25 +68,26 @@ class Tools:
     def search_movies_by_title(self, query: str) -> str:
         """
         Search for movies in the library by TITLE ONLY.
-        DO NOT use this for actor/actress searches - use plexy_plex_tool search_by_actor() instead.
+        DO NOT use this for actor/actress searches - use midnight_plex_tool search_by_actor() instead.
 
         :param query: Movie TITLE to search for (NOT an actor name)
         :return: List of matching movies with details
         """
-        # Detect if user might be searching for an actor
-        common_actor_patterns = ["movies with", "films with", "starring", "featuring", "acted by"]
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
         
-        # Check if query looks like a person's name (two capitalized words)
-        words = query.split()
-        looks_like_person = (
-            len(words) >= 2 and 
-            all(w[0].isupper() for w in words if w) and
-            not any(pattern in query_lower for pattern in ["the ", "a ", "an "])
-        )
+        # Only flag as actor search if query contains explicit actor patterns
+        actor_patterns = ["movies with", "films with", "starring", "featuring", "acted by", "with actor", "with actress"]
+        is_actor_query = any(pattern in query_lower for pattern in actor_patterns)
         
-        if looks_like_person and len(query) > 5:
-            return f"'{query}' looks like an actor/person name. For actor searches, please use: 'Use the Plex tool's search_by_actor function to find movies with {query}'"
+        if is_actor_query:
+            # Extract the actor name (everything after the pattern)
+            actor_name = query
+            for pattern in actor_patterns:
+                if pattern in query_lower:
+                    idx = query_lower.find(pattern)
+                    actor_name = query[idx + len(pattern):].strip()
+                    break
+            return f"For actor searches, please use the Plex tool's search_by_actor function to find movies with '{actor_name}'"
         
         movies = self._get_all_movies()
         if not movies:

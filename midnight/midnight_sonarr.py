@@ -1,6 +1,6 @@
 """
-title: Plexy Sonarr Tool
-description: Search and query TV shows from Sonarr for the Plexy media assistant
+title: Midnight Sonarr Tool
+description: Search and query TV shows from Sonarr for the Midnight media assistant
 author: Peter Marino
 version: 1.2.0
 """
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Sonarr TV show library tools for Plexy."""
+    """Sonarr TV show library tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for Sonarr API connection."""

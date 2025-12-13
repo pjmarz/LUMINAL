@@ -1,6 +1,6 @@
 """
-title: Plexy Bazarr Tool
-description: Subtitle status and management via Bazarr for Plexy
+title: Midnight Bazarr Tool
+description: Subtitle status and management via Bazarr for Midnight
 author: Peter Marino
 version: 1.2.0
 """
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Bazarr subtitle management tools for Plexy."""
+    """Bazarr subtitle management tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for Bazarr API connection."""

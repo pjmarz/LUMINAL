@@ -1,5 +1,5 @@
 """
-title: Plexy Tautulli Tool
+title: Midnight Tautulli Tool
 description: Viewing analytics and activity monitoring via Tautulli
 author: Peter Marino
 version: 1.2.0
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Tautulli analytics tools for Plexy."""
+    """Tautulli analytics tools for Midnight."""
 
     class Valves(BaseModel):
         """Configuration for Tautulli API connection."""

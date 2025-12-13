@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Plexy Media Assistant**: OpenWebUI-based media library assistant (v1.2.0)
+- **Midnight Media Assistant**: OpenWebUI-based media library assistant (v1.2.0)
   - 6 custom Python tools for Plex, Radarr, Sonarr, Bazarr, Tautulli, SABnzbd integration
   - Actor and director search with fuzzy matching for typo tolerance
   - Genre search with 30+ synonym mappings (sci-fi → Science Fiction, etc.)
