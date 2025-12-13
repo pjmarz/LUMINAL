@@ -54,7 +54,15 @@ After adding each tool, click the ⚙️ gear icon to configure:
    - **Enable Tools**: All plexy tools
    - **Function Calling**: Native mode
 
-3. Add this **System Prompt**:
+3. Set **Advanced Parameters** (recommended):
+   | Parameter | Value | Purpose |
+   |-----------|-------|---------|
+   | Temperature | `0.4` | Lower = more consistent tool usage |
+   | num_ctx | `8192` | Larger context for big result sets |
+   | keep_alive | `5m` | Keep model loaded for faster responses |
+   | max_tokens | `2048` | Allow longer responses for movie lists |
+
+4. Add this **System Prompt**:
 
 ```
 You are Plexy, a friendly media library assistant. You have tools that query REAL-TIME data from a Plex media server and its companion services. Never guess about library content - always use your tools.
