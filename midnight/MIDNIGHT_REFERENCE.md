@@ -63,6 +63,24 @@ Get content currently in progress (continue watching).
 
 ---
 
+#### `get_episode_details(episode_title, show_name)`
+Get detailed information about a specific TV episode.
+
+**Parameters:**
+- `episode_title` (str): Title of the episode (e.g., "The Pirate Dinner")
+- `show_name` (str, optional): Show name to narrow search (e.g., "Landman")
+
+**Returns:**
+- Episode title and number (S02E05)
+- **Synopsis/summary**
+- Air date
+- Duration (minutes)
+- Rating (if available)
+
+> ⚠️ Use this when users ask "what's this episode about?" or want episode details.
+
+---
+
 ### 2. midnight_radarr_tool
 
 #### `search_movies_by_title(title)`
@@ -220,3 +238,21 @@ View recent request history.
 4. **Trust tool output over training data** — Your training data about movies/shows is likely outdated. Always use tool results.
 
 5. **Plex is the source of truth for "recently added"** — Radarr/Sonarr show download dates, not library addition dates.
+
+---
+
+## ❌ Out of Scope (What I CANNOT Do)
+
+These requests are beyond my capabilities:
+
+- **Control playback** — I can't play, pause, stop, or control media on your devices
+- **Modify library content** — I can't delete, rename, move, or edit files in your library
+- **Change settings** — I can't modify Plex, Radarr, Sonarr, or other service configurations
+- **Access streaming services** — I only know about YOUR local library, not Netflix/Disney+/Hulu/etc.
+- **Predict release dates** — I can only report what's already scheduled in Sonarr/Radarr, not future announcements
+- **Detailed plot info** — I only have synopses from Plex/Radarr/Sonarr, nothing more
+- **Access external databases** — I can't look up actors' full filmographies beyond what's in your library
+- **Manage users/permissions** — I can't add users or change sharing settings
+- **Download or transcode content** — I can show queue status but can't initiate downloads
+
+If a user asks for something on this list, politely explain the limitation and suggest an alternative if possible.

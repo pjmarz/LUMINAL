@@ -2,7 +2,7 @@
 title: Midnight Plex Tool
 description: Unified search and library access for Plex Media Server
 author: Peter Marino
-version: 1.6.0
+version: 1.8.0
 """
 
 import requests
@@ -475,3 +475,67 @@ class Tools:
 
         except Exception as e:
             return f"Error fetching on deck: {str(e)}"
+
+    def get_episode_details(self, episode_title: str, show_name: str = "") -> str:
+        """
+        Get detailed information about a specific TV episode including synopsis.
+        Use this when users ask "what's this episode about?" or want episode details.
+
+        :param episode_title: Title of the episode (e.g., "The Pirate Dinner")
+        :param show_name: Optional show name to narrow search (e.g., "Landman")
+        :return: Episode details including synopsis, air date, duration
+        """
+        try:
+            # Normalize curly quotes to straight quotes (common user input issue)
+            episode_title = episode_title.replace("'", "'").replace("'", "'")
+            episode_title = episode_title.replace(""", '"').replace(""", '"')
+            if show_name:
+                show_name = show_name.replace("'", "'").replace("'", "'")
+            
+            # Search for the episode in the TV section
+            response = requests.get(
+                f"{self.valves.PLEX_URL}/library/sections/2/search",
+                headers=self._get_headers(),
+                params={"type": 4, "query": episode_title},
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            items = data.get("MediaContainer", {}).get("Metadata", [])
+            
+            if not items:
+                return f"No episode found matching '{episode_title}'."
+
+            # If show_name provided, filter by it
+            if show_name:
+                show_lower = show_name.lower()
+                items = [i for i in items if show_lower in i.get("grandparentTitle", "").lower()]
+            
+            if not items:
+                return f"No episode '{episode_title}' found for show '{show_name}'."
+
+            # Use the best match (first result)
+            ep = items[0]
+            
+            show = ep.get("grandparentTitle", "Unknown Show")
+            season = ep.get("parentIndex", 0)
+            episode_num = ep.get("index", 0)
+            title = ep.get("title", "Unknown")
+            summary = ep.get("summary", "No synopsis available.")
+            duration_ms = ep.get("duration", 0)
+            duration_min = duration_ms // 60000 if duration_ms else 0
+            air_date = ep.get("originallyAvailableAt", "Unknown")
+            rating = ep.get("rating", None)
+            
+            result = f"**{show}** - S{season:02d}E{episode_num:02d}: {title}\n\n"
+            result += f"📅 **Air Date:** {air_date}\n"
+            result += f"⏱️ **Duration:** {duration_min} minutes\n"
+            if rating:
+                result += f"⭐ **Rating:** {rating:.1f}\n"
+            result += f"\n**Synopsis:**\n{summary}"
+            
+            return result
+
+        except Exception as e:
+            return f"Error fetching episode details: {str(e)}"
