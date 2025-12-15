@@ -5,18 +5,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LUMINAL - Self-Hosted AI Automation Platform</title>
+    <meta name="description"
+        content="Self-hosted AI automation platform featuring Midnight Media Assistant, workflow automation, and local LLM inference.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary-color: #1a1a1a;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --ai-color: #9b59b6;
+            --primary-color: #0f0f0f;
+            --secondary-color: #6366f1;
+            --accent-color: #f59e0b;
+            --midnight-color: #8b5cf6;
             --text-color: #ffffff;
-            --card-bg: #2d2d2d;
-            --body-bg: #121212;
-            --muted-color: #a0a0a0;
+            --text-muted: #d1d5db;
+            --text-body: #e5e7eb;
+            --card-bg: #1e1e2e;
+            --card-border: #3d3d4d;
+            --body-bg: #0a0a0f;
+        }
+
+        /* Override Bootstrap text colors - make ALL text visible */
+        .text-muted {
+            color: #d1d5db !important;
+        }
+
+        p.text-muted,
+        .card p.text-muted,
+        .small.text-muted,
+        small.text-muted {
+            color: #c4c8cc !important;
+        }
+
+        /* Card headings and content */
+        .card h4,
+        .card h5,
+        .card h6,
+        .card strong {
+            color: #ffffff !important;
+        }
+
+        .feature-card h5,
+        .model-card h4,
+        .skill-card h6 {
+            color: #ffffff !important;
+        }
+
+        /* Model sizes and descriptions */
+        .model-size,
+        .model-card p {
+            color: #d1d5db !important;
+        }
+
+        /* System components - service names */
+        .card-body strong {
+            color: #ffffff !important;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         html {
@@ -24,332 +70,738 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--body-bg);
             color: var(--text-color);
+            line-height: 1.6;
         }
 
-        /* Animated gradient background for hero */
+        /* Navbar */
+        .navbar {
+            background: rgba(15, 15, 15, 0.8) !important;
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* Hero Section */
         .hero {
-            background: linear-gradient(-45deg, var(--primary-color), #2c3e50, #34495e, var(--ai-color));
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-            color: white;
-            padding: 3rem 0;
-            margin-bottom: 2rem;
-        }
-
-        @keyframes gradient {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        /* Animated icons in features section */
-        .feature-icon {
-            font-size: 2.5rem;
-            color: var(--ai-color);
-            margin-bottom: 1rem;
-            transition: transform 0.3s ease, color 0.3s ease;
-        }
-
-        .feature-icon:hover {
-            transform: scale(1.2);
-            color: var(--secondary-color);
-        }
-
-        /* Card hover effects */
-        .service-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            margin-bottom: 1.5rem;
-            background-color: var(--card-bg);
-            border: 1px solid #404040;
+            background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--body-bg) 70%);
+            padding: 6rem 0 4rem;
             position: relative;
             overflow: hidden;
         }
 
-        .service-card::before {
+        .hero::before {
             content: '';
             position: absolute;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, transparent, rgba(155, 89, 182, 0.1), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.6s ease;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            pointer-events: none;
         }
 
-        .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.2);
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
         }
 
-        .service-card:hover::before {
-            transform: translateX(100%);
+        .hero .lead {
+            font-size: 1.25rem;
+            color: var(--text-body);
         }
 
-        /* Service icon hover effects */
-        .service-card img {
-            width: 32px;
-            height: auto;
-            object-fit: contain;
-            transition: transform 0.3s ease;
+        .hero .subtitle {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        .service-card:hover img {
-            transform: scale(1.1);
+        /* Section Styling */
+        section {
+            padding: 5rem 0;
         }
 
-        /* Link hover effects */
-        .text-white {
-            transition: color 0.3s ease;
+        section h2 {
+            font-weight: 600;
+            margin-bottom: 3rem;
         }
 
-        .text-white:hover {
-            color: var(--ai-color) !important;
+        .section-dark {
+            background: var(--card-bg);
         }
 
-        /* Scroll to top button */
-        .scroll-top {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: var(--ai-color);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-decoration: none;
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            transform: translateY(100px);
-            z-index: 1000;
-        }
-
-        .scroll-top.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .scroll-top:hover {
-            transform: translateY(-5px);
-            color: white;
-        }
-
-        .text-muted {
-            color: var(--muted-color) !important;
-        }
-
-        .hero-content {
-            padding: 2rem 0;
-        }
-
-        .navbar {
-            background-color: var(--primary-color) !important;
-            transition: background-color 0.3s ease;
-        }
-
-        .navbar.scrolled {
-            background-color: rgba(26, 26, 26, 0.95) !important;
-            backdrop-filter: blur(10px);
-        }
-
+        /* Cards */
         .card {
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid #404040;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.2);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15);
         }
 
-        .bg-light {
-            background-color: #1a1a1a !important;
+        /* Feature Cards */
+        .feature-card {
+            padding: 2rem;
+            text-align: center;
         }
 
-        .btn-light {
-            background-color: #404040;
-            color: white;
-            border: none;
-            transition: all 0.3s ease;
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--secondary-color), var(--midnight-color));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 1.5rem;
         }
 
-        .btn-light:hover {
-            background-color: var(--ai-color);
-            color: white;
-            transform: translateY(-2px);
+        /* Midnight Section */
+        .midnight-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .midnight-badge {
+            background: linear-gradient(135deg, var(--midnight-color), #a78bfa);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tool Pills */
+        .tool-pill {
+            background: rgba(139, 92, 246, 0.15);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin: 0.25rem;
+        }
+
+        /* Lucid-style Architecture Diagram */
+        .arch-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            padding: 1.5rem;
+        }
+
+        .arch-box {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3d 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            min-width: 280px;
+        }
+
+        .arch-box.vm-box {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.1) 100%);
+        }
+
+        .arch-box.inner-box {
+            background: linear-gradient(135deg, #252535 0%, #1a1a2a 100%);
+            border-color: rgba(139, 92, 246, 0.4);
+            margin-top: 0.75rem;
+            padding: 1rem;
+        }
+
+        .arch-box.services-box {
+            border-color: rgba(245, 158, 11, 0.4);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+        }
+
+        .arch-box-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--midnight-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .arch-box-title.accent {
+            color: var(--accent-color);
+        }
+
+        .arch-box-content {
+            font-size: 0.8rem;
+            color: #c4c8cc;
+        }
+
+        .arch-box-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0.5rem 0 0;
+            text-align: left;
+        }
+
+        .arch-box-content li {
+            padding: 0.2rem 0;
+            color: #a0a4a8;
+        }
+
+        .arch-box-content li::before {
+            content: "→ ";
+            color: var(--midnight-color);
+        }
+
+        .arch-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #6b7280;
+            font-size: 0.75rem;
+            padding: 0.5rem 0;
+        }
+
+        .arch-connector .line {
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--midnight-color), var(--accent-color));
+            border-radius: 1px;
+        }
+
+        .arch-connector .arrow {
+            color: var(--accent-color);
+            font-size: 1rem;
+        }
+
+        .arch-connector .label {
+            background: rgba(99, 102, 241, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0.25rem 0;
+        }
+
+        .services-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .service-tag {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            color: #fbbf24;
+        }
+
+        /* Cluster wrapper */
+        .cluster-box {
+            border: 2px dashed rgba(167, 139, 250, 0.4);
+            border-radius: 16px;
+            padding: 1rem;
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .cluster-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a78bfa;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .hosts-row {
+            display: flex;
+            gap: 1rem;
+            align-items: stretch;
+        }
+
+        .host-box {
+            flex: 1;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, transparent 100%);
+        }
+
+        .host-title {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .host-title strong {
+            color: #a5b4fc !important;
+        }
+
+        /* Horizontal connector between hosts */
+        .h-connector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 0;
+        }
+
+        .h-connector .h-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(to right, var(--midnight-color), var(--accent-color));
+        }
+
+        .h-connector .h-label {
+            background: rgba(99, 102, 241, 0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #d1d5db;
+            margin: 0 0.5rem;
+            white-space: nowrap;
+        }
+
+        .vm-box-compact {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d3d 100%);
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            border-radius: 10px;
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .vm-box-compact.purple {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
+        }
+
+        .vm-box-compact.amber {
+            border-color: rgba(245, 158, 11, 0.4);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+        }
+
+        .vm-name {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+
+        .vm-path {
+            font-size: 0.6rem;
+            color: #6b7280;
+            font-family: 'Courier New', monospace;
+        }
+
+        .vm-content {
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: #a0a4a8;
+            text-align: left;
+        }
+
+        .vm-content strong {
+            color: #c4b5fd !important;
+        }
+
+        .services-compact {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+
+        .services-compact .service-tag {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.4rem;
+        }
+
+        /* Connector between VMs (horizontal in row) */
+        .vm-connector {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.25rem;
+            min-width: 80px;
+        }
+
+        .vm-connector .v-line {
+            width: 15px;
+            height: 2px;
+            background: linear-gradient(to right, var(--midnight-color), var(--accent-color));
+            border-radius: 1px;
+        }
+
+        .vm-connector .v-label {
+            background: rgba(99, 102, 241, 0.2);
+            padding: 0.3rem 0.4rem;
+            border-radius: 8px;
+            font-size: 0.5rem;
+            text-transform: none;
+            letter-spacing: 0.3px;
+            color: #d1d5db;
+            margin: 0 0.25rem;
+            white-space: nowrap;
+        }
+
+        /* Component icons */
+        .component-icon {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        /* Model Cards */
+        .model-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .model-size {
+            color: var(--text-muted);
+            font-size: 0.875rem;
         }
 
         .model-badge {
-            background: linear-gradient(135deg, var(--ai-color), var(--secondary-color));
-            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--secondary-color), var(--midnight-color));
+            padding: 0.35rem 0.75rem;
             border-radius: 20px;
-            display: inline-block;
-            margin: 0.25rem;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
+            font-weight: 500;
         }
 
-        .service-url {
-            font-family: 'Consolas', monospace;
+        /* Example Deployment */
+        .deployment-url {
+            font-family: 'SF Mono', 'Consolas', monospace;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
             color: var(--secondary-color);
-            background-color: rgba(52, 152, 219, 0.1);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
+        }
+
+        /* Skills Grid */
+        .skill-card {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .skill-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary-color);
+            border-top: 1px solid var(--card-border);
+            padding: 3rem 0;
+        }
+
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: var(--secondary-color);
+        }
+
+        /* Utility */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--secondary-color), var(--midnight-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color), var(--midnight-color));
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Tables */
+        .table-dark {
+            --bs-table-bg: transparent;
+            --bs-table-border-color: var(--card-border);
+        }
+
+        .table-dark th {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .table-dark td {
+            color: var(--text-color);
         }
     </style>
 </head>
 
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">
-                <strong>🚀 LUMINAL</strong>
-            </a>
+            <a class="navbar-brand" href="#">LUMINAL</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#components">Components</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#models">AI Models</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="https://github.com/pjmarz/LUMINAL">GitHub</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#midnight">Midnight</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#components">Components</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#models">Models</a></li>
+                    <li class="nav-item"><a class="nav-link" href="https://github.com/pjmarz/LUMINAL">GitHub</a></li>
                 </ul>
             </div>
         </div>
     </nav>
-    <div class="container mt-3">
-        <div class="alert alert-warning text-center" role="alert">
-            <strong>Showcase:</strong> This repository demonstrates LUMINAL and is not intended to be cloned or deployed
-            as-is. See the README and Changelog for details.
-            <a href="https://github.com/pjmarz/LUMINAL#readme" class="ms-2">README</a> · <a
-                href="https://github.com/pjmarz/LUMINAL/blob/main/CHANGELOG.md">Changelog</a>
-        </div>
-    </div>
 
     <!-- Hero Section -->
     <section class="hero">
-        <div class="container text-center hero-content">
-            <h1 class="display-3 mb-3">🚀 LUMINAL</h1>
-            <p class="lead">Self-Hosted AI Automation Platform</p>
-            <p class="text-white-50">Workflow automation, visual AI development, and LLM inference in one containerized
-                environment</p>
+        <div class="container text-center">
+            <span class="midnight-badge mb-4 d-inline-block">Portfolio Project</span>
+            <h1>LUMINAL</h1>
+            <p class="lead mb-4">Self-Hosted AI Automation Platform</p>
+            <p class="text-muted mb-4" style="max-width: 600px; margin: 0 auto;">
+                Workflow automation, local LLM inference, and Midnight Media Assistant —
+                all in a containerized, GPU-accelerated environment.
+            </p>
+            <a href="https://github.com/pjmarz/LUMINAL" class="btn btn-primary">
+                <i class="bi bi-github me-2"></i>View on GitHub
+            </a>
         </div>
     </section>
 
     <!-- Features Section -->
-    <section id="features" class="py-5">
+    <section id="features">
         <div class="container">
-            <h2 class="text-center mb-5">Key Features</h2>
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    <i class="bi bi-diagram-3 feature-icon"></i>
-                    <h3>Workflow Automation</h3>
-                    <p>Visual workflow builder with n8n for creating automated processes with custom AI nodes and
-                        integrations.</p>
+            <h2 class="text-center">Key Features</h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="feature-icon"><i class="bi bi-moon-stars"></i></div>
+                        <h5>Midnight Media Assistant</h5>
+                        <p class="text-muted">Custom AI assistant with 7 Python tools for intelligent media library
+                            access. Built with anti-hallucination safeguards.</p>
+                    </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="feature-icon"><i class="bi bi-diagram-3"></i></div>
+                        <h5>Workflow Automation</h5>
+                        <p class="text-muted">Visual workflow builder with n8n for creating automated processes with
+                            custom AI nodes and integrations.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="feature-icon"><i class="bi bi-gpu-card"></i></div>
+                        <h5>GPU Accelerated</h5>
+                        <p class="text-muted">NVIDIA GPU passthrough for accelerated AI inference. Docker Secrets for
+                            secure credential management.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-                <div class="col-md-4 text-center">
-                    <i class="bi bi-shield-check feature-icon"></i>
-                    <h3>Secure & Optimized</h3>
-                    <p>Built on Docker with NVIDIA GPU acceleration, Docker Secrets for secure credential management,
-                        and comprehensive API connectivity monitoring for all services.</p>
+    <!-- Midnight Section -->
+    <section id="midnight" class="midnight-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                    <span class="midnight-badge mb-3 d-inline-block">Custom AI Assistant</span>
+                    <h2 class="mb-3">Midnight Media Assistant</h2>
+                    <p class="text-muted mb-4">
+                        A custom AI assistant built on OpenWebUI with advanced prompt engineering,
+                        RAG-enabled knowledge, and real-time tool integration for media library management.
+                    </p>
+
+                    <h6 class="text-uppercase mb-3" style="color: var(--text-muted); font-size: 0.75rem;">Integrated
+                        Tools</h6>
+                    <div class="mb-4">
+                        <span class="tool-pill">🎬 Plex</span>
+                        <span class="tool-pill">📥 Radarr</span>
+                        <span class="tool-pill">📺 Sonarr</span>
+                        <span class="tool-pill">📊 Tautulli</span>
+                        <span class="tool-pill">💬 Bazarr</span>
+                        <span class="tool-pill">⬇️ SABnzbd</span>
+                        <span class="tool-pill">🎯 Overseerr</span>
+                    </div>
+
+                    <h6 class="text-uppercase mb-3" style="color: var(--text-muted); font-size: 0.75rem;">Key
+                        Capabilities</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Real-time library queries
+                            with accurate dates</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Anti-hallucination prompt
+                            engineering</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Episode synopses and
+                            detailed metadata</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Actor/director search
+                            across library</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <!-- Marz Cluster Box -->
+                    <div class="cluster-box">
+                        <div class="cluster-title">☁️ Proxmox Cluster: <strong>Marz</strong></div>
+
+                        <div class="hosts-row">
+                            <!-- glados Host -->
+                            <div class="host-box">
+                                <div class="host-title">Host: <strong>glados</strong></div>
+                                <div class="vm-box-compact purple">
+                                    <div class="vm-name">dev</div>
+                                    <div class="vm-path">/root/LUMINAL/</div>
+                                    <div class="vm-content">
+                                        <strong>OpenWebUI</strong> + <strong>Midnight</strong>
+                                        <div style="margin-top: 0.3rem; font-size: 0.65rem;">
+                                            → gemma3:12b<br>
+                                            → 7 Python tools<br>
+                                            → RAG Knowledge
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Connector between VMs -->
+                            <div class="vm-connector">
+                                <div class="v-line"></div>
+                                <span class="v-label">← HTTP APIs →</span>
+                                <div class="v-line"></div>
+                            </div>
+
+                            <!-- virgil Host -->
+                            <div class="host-box">
+                                <div class="host-title">Host: <strong>virgil</strong></div>
+                                <div class="vm-box-compact amber">
+                                    <div class="vm-name">docker</div>
+                                    <div class="vm-path">/root/HELIOS/</div>
+                                    <div class="services-compact">
+                                        <span class="service-tag">Plex</span>
+                                        <span class="service-tag">Radarr</span>
+                                        <span class="service-tag">Sonarr</span>
+                                        <span class="service-tag">Tautulli</span>
+                                        <span class="service-tag">Bazarr</span>
+                                        <span class="service-tag">SABnzbd</span>
+                                        <span class="service-tag">Overseerr</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Components Section -->
-    <section id="components" class="py-5 bg-light">
+    <section id="components" class="section-dark">
         <div class="container">
-            <h2 class="text-center mb-5">System Components</h2>
-            <div class="row">
+            <h2 class="text-center">System Components</h2>
+            <div class="row g-4">
                 <div class="col-md-6">
-                    <div class="card service-card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-4">🤖 AI Services</h5>
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h5 class="mb-4">🤖 AI Services</h5>
                             <div class="d-flex align-items-center mb-3">
-                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32"
-                                    height="32" alt="n8n" class="me-3">
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png"
+                                    class="component-icon me-3" alt="n8n">
                                 <div>
-                                    <a href="https://github.com/n8n-io/n8n"
-                                        class="text-white text-decoration-none">n8n</a>
-                                    <small class="d-block text-muted">Workflow Automation Platform</small>
+                                    <strong>n8n</strong>
+                                    <small class="d-block text-muted">Workflow Automation</small>
                                 </div>
                             </div>
-
                             <div class="d-flex align-items-center mb-3">
                                 <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png"
-                                    width="32" height="32" alt="OpenWebUI" class="me-3">
+                                    class="component-icon me-3" alt="OpenWebUI">
                                 <div>
-                                    <a href="https://github.com/open-webui/open-webui"
-                                        class="text-white text-decoration-none">OpenWebUI</a>
-                                    <small class="d-block text-muted">AI Chat + Midnight Media Assistant</small>
+                                    <strong>OpenWebUI</strong>
+                                    <small class="d-block text-muted">AI Chat Interface with RAG</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
                                 <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png"
-                                    width="32" height="32" alt="Ollama" class="me-3">
+                                    class="component-icon me-3" alt="Ollama">
                                 <div>
-                                    <a href="https://github.com/ollama/ollama"
-                                        class="text-white text-decoration-none">Ollama</a>
-                                    <small class="d-block text-muted">Local LLM Inference Server</small>
+                                    <strong>Ollama</strong>
+                                    <small class="d-block text-muted">Local LLM Inference</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card service-card">
-                        <div class="card-body">
-                            <h5 class="card-title mb-4">🔧 Infrastructure</h5>
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h5 class="mb-4">🔧 Infrastructure</h5>
                             <div class="d-flex align-items-center mb-3">
                                 <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png"
-                                    width="32" height="32" alt="Qdrant" class="me-3">
+                                    class="component-icon me-3" alt="Qdrant">
                                 <div>
-                                    <a href="https://github.com/qdrant/qdrant"
-                                        class="text-white text-decoration-none">Qdrant</a>
-                                    <small class="d-block text-muted">Vector Database for Semantic Search</small>
+                                    <strong>Qdrant</strong>
+                                    <small class="d-block text-muted">Vector Database</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center mb-3">
                                 <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png"
-                                    width="32" height="32" alt="Docker" class="me-3">
+                                    class="component-icon me-3" alt="Docker">
                                 <div>
-                                    <a href="https://www.docker.com/" class="text-white text-decoration-none">Docker</a>
-                                    <small class="d-block text-muted">Containerization Platform</small>
+                                    <strong>Docker</strong>
+                                    <small class="d-block text-muted">Container Orchestration</small>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center">
-                                <i class="bi bi-gpu-card me-3"
-                                    style="font-size: 1.5rem; color: var(--secondary-color);"></i>
+                                <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/nvidia.png"
+                                    class="component-icon me-3" alt="NVIDIA">
                                 <div>
-                                    <strong class="text-white">NVIDIA GPU</strong>
-                                    <small class="d-block text-muted">GPU Acceleration for AI Workloads</small>
+                                    <strong>NVIDIA GPU</strong>
+                                    <small class="d-block text-muted">GPU Acceleration</small>
                                 </div>
                             </div>
                         </div>
@@ -360,89 +812,80 @@
     </section>
 
     <!-- AI Models Section -->
-    <section id="models" class="py-5">
+    <section id="models">
         <div class="container">
-            <h2 class="text-center mb-5">Available LLM Models</h2>
-            <div class="row">
+            <h2 class="text-center">Available LLM Models</h2>
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="card service-card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-robot"
-                                style="font-size: 3rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
-                            <h4>llama3.1:8b</h4>
-                            <p class="text-muted">4.9 GB</p>
-                            <p>Fast and capable general-purpose model</p>
-                            <span class="model-badge">Fast Inference</span>
-                        </div>
+                    <div class="card model-card h-100">
+                        <i class="bi bi-lightning" style="font-size: 2.5rem; color: var(--accent-color);"></i>
+                        <h4 class="mt-3">llama3.1:8b</h4>
+                        <p class="model-size">4.9 GB</p>
+                        <p class="text-muted">Fast general-purpose model</p>
+                        <span class="model-badge">Fast Inference</span>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card service-card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-cpu"
-                                style="font-size: 3rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
-                            <h4>gemma3:12b</h4>
-                            <p class="text-muted">8.1 GB</p>
-                            <p>High-performance model for complex tasks</p>
-                            <span class="model-badge">High Performance</span>
-                        </div>
+                    <div class="card model-card h-100">
+                        <i class="bi bi-stars" style="font-size: 2.5rem; color: var(--midnight-color);"></i>
+                        <h4 class="mt-3">gemma3:12b</h4>
+                        <p class="model-size">8.1 GB</p>
+                        <p class="text-muted">High-performance for complex tasks</p>
+                        <span class="model-badge">Midnight Default</span>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card service-card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-rocket"
-                                style="font-size: 3rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
-                            <h4>gpt-oss:20b</h4>
-                            <p class="text-muted">~20 GB</p>
-                            <p>Maximum capability for advanced reasoning</p>
-                            <span class="model-badge">Maximum Power</span>
-                        </div>
+                    <div class="card model-card h-100">
+                        <i class="bi bi-rocket-takeoff" style="font-size: 2.5rem; color: var(--secondary-color);"></i>
+                        <h4 class="mt-3">gpt-oss:20b</h4>
+                        <p class="model-size">~20 GB</p>
+                        <p class="text-muted">Maximum reasoning capability</p>
+                        <span class="model-badge">Advanced</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Service Access Section -->
-    <section id="access" class="py-5 bg-light">
+    <!-- Example Deployment Section -->
+    <section id="deployment" class="section-dark">
         <div class="container">
-            <h2 class="text-center mb-5">Service Access</h2>
-            <div class="row">
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card service-card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">n8n Automation</h5>
-                            <p class="service-url">http://localhost:5678</p>
-                            <p class="card-text">Low-code workflow automation with AI integrations</p>
+            <h2 class="text-center">Example Deployment</h2>
+            <p class="text-center text-muted mb-5">Service endpoints for a typical LUMINAL deployment</p>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h6>n8n Automation</h6>
+                            <span class="deployment-url">:5678</span>
+                            <p class="text-muted small mt-2 mb-0">Workflow automation</p>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card service-card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">OpenWebUI + Midnight</h5>
-                            <p class="service-url">http://localhost:3000</p>
-                            <p class="card-text">AI chat interface with Midnight media library assistant</p>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h6>OpenWebUI + Midnight</h6>
+                            <span class="deployment-url">:3000</span>
+                            <p class="text-muted small mt-2 mb-0">AI chat interface</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card service-card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Qdrant Dashboard</h5>
-                            <p class="service-url">http://localhost:6333/dashboard</p>
-                            <p class="card-text">Vector database management interface</p>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h6>Qdrant</h6>
+                            <span class="deployment-url">:6333</span>
+                            <p class="text-muted small mt-2 mb-0">Vector database</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card service-card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Ollama API</h5>
-                            <p class="service-url">http://localhost:11434</p>
-                            <p class="card-text">Direct API access to LLM models</p>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card h-100">
+                        <div class="card-body p-4">
+                            <h6>Ollama API</h6>
+                            <span class="deployment-url">:11434</span>
+                            <p class="text-muted small mt-2 mb-0">LLM inference API</p>
                         </div>
                     </div>
                 </div>
@@ -451,48 +894,36 @@
     </section>
 
     <!-- Technical Skills Section -->
-    <section id="skills" class="py-5">
+    <section id="skills">
         <div class="container">
-            <h2 class="text-center mb-5">Technical Skills Demonstrated</h2>
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="bi bi-server"
-                                style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
-                            <h6>Infrastructure & DevOps</h6>
-                            <p class="small text-muted">Docker, GPU acceleration, container orchestration</p>
-                        </div>
+            <h2 class="text-center">Technical Skills Demonstrated</h2>
+            <div class="row g-4">
+                <div class="col-6 col-md-3">
+                    <div class="card skill-card h-100">
+                        <i class="bi bi-server skill-icon" style="color: var(--secondary-color);"></i>
+                        <h6>Infrastructure & DevOps</h6>
+                        <p class="small text-muted mb-0">Docker, GPU passthrough, orchestration</p>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="bi bi-brain"
-                                style="font-size: 2rem; color: var(--ai-color); margin-bottom: 1rem;"></i>
-                            <h6>AI & Data Engineering</h6>
-                            <p class="small text-muted">LLM deployment, vector databases, AI workflows</p>
-                        </div>
+                <div class="col-6 col-md-3">
+                    <div class="card skill-card h-100">
+                        <i class="bi bi-lightbulb skill-icon" style="color: var(--midnight-color);"></i>
+                        <h6>AI & Prompt Engineering</h6>
+                        <p class="small text-muted mb-0">LLM tools, RAG, anti-hallucination</p>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="bi bi-shield-lock"
-                                style="font-size: 2rem; color: var(--accent-color); margin-bottom: 1rem;"></i>
-                            <h6>Security Engineering</h6>
-                            <p class="small text-muted">Docker Secrets, secure configurations</p>
-                        </div>
+                <div class="col-6 col-md-3">
+                    <div class="card skill-card h-100">
+                        <i class="bi bi-shield-lock skill-icon" style="color: var(--accent-color);"></i>
+                        <h6>Security</h6>
+                        <p class="small text-muted mb-0">Docker Secrets, secure configs</p>
                     </div>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <i class="bi bi-diagram-3"
-                                style="font-size: 2rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
-                            <h6>System Architecture</h6>
-                            <p class="small text-muted">Multi-service design, scalability</p>
-                        </div>
+                <div class="col-6 col-md-3">
+                    <div class="card skill-card h-100">
+                        <i class="bi bi-code-slash skill-icon" style="color: var(--secondary-color);"></i>
+                        <h6>Python Development</h6>
+                        <p class="small text-muted mb-0">API integration, tool building</p>
                     </div>
                 </div>
             </div>
@@ -500,50 +931,18 @@
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer>
         <div class="container text-center">
-            <p class="mb-2">
-                <strong>the child of light</strong>
-            </p>
+            <p class="mb-2"><strong>LUMINAL</strong></p>
+            <p class="text-muted small mb-3">Self-Hosted AI Automation Platform</p>
             <p class="mb-0">
-                <small class="text-muted">LUMINAL - Self-Hosted AI Automation Platform</small>
-            </p>
-            <p class="mt-2">
-                <a href="https://github.com/pjmarz/LUMINAL" class="text-white text-decoration-none">
-                    <i class="bi bi-github"></i> GitHub
-                </a> ·
-                <a href="https://pjmarz.github.io/LUMINAL/" class="text-white text-decoration-none">
-                    <i class="bi bi-globe"></i> Website
-                </a>
+                <a href="https://github.com/pjmarz/LUMINAL" class="me-3"><i class="bi bi-github me-1"></i>GitHub</a>
+                <a href="https://github.com/pjmarz/LUMINAL#readme"><i class="bi bi-book me-1"></i>Documentation</a>
             </p>
         </div>
     </footer>
 
-    <a href="#" class="scroll-top">
-        <i class="bi bi-arrow-up"></i>
-    </a>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Navbar color change on scroll
-        window.addEventListener('scroll', function () {
-            if (window.scrollY > 50) {
-                document.querySelector('.navbar').classList.add('scrolled');
-            } else {
-                document.querySelector('.navbar').classList.remove('scrolled');
-            }
-        });
-
-        // Scroll to top button
-        window.addEventListener('scroll', function () {
-            const scrollBtn = document.querySelector('.scroll-top');
-            if (window.scrollY > 300) {
-                scrollBtn.classList.add('visible');
-            } else {
-                scrollBtn.classList.remove('visible');
-            }
-        });
-    </script>
 </body>
 
 </html>
