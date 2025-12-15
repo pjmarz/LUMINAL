@@ -32,7 +32,7 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="32" height="32" alt="OpenWebUI"></td>
       <td><b><a href="https://github.com/open-webui/open-webui">OpenWebUI</a></b></td>
-      <td>AI Chat Interface with RAG + Midnight Media Assistant</td>
+      <td>AI Chat Interface with RAG</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama"></td>
@@ -198,6 +198,53 @@ LUMINAL supports three LLM models via Ollama:
 - **gpt-oss:20b** (~20GB) - Maximum capability for advanced reasoning
 
 Models are automatically pulled on first startup and cached in the `ollama_storage` volume.
+
+## 🌙 Midnight Media Assistant
+
+**Midnight** is a custom AI assistant built on top of OpenWebUI that provides intelligent access to your entire media library. It demonstrates advanced prompt engineering, tool integration, and RAG (Retrieval-Augmented Generation) capabilities.
+
+### Architecture
+
+| Component | Description |
+|-----------|-------------|
+| **Base Model** | gemma3:12b via Ollama |
+| **Interface** | OpenWebUI with custom system prompt |
+| **Tools** | 7 Python-based function tools |
+| **Knowledge** | RAG-enabled reference documentation |
+
+### Custom Tools (`midnight/`)
+
+| Tool | Purpose |
+|------|---------|
+| `midnight_plex_tool` | Search library, get recently added, episode details, actor/director search |
+| `midnight_radarr_tool` | Movie details, genres, synopses |
+| `midnight_sonarr_tool` | TV show details, upcoming episodes |
+| `midnight_tautulli_tool` | Watch history, current activity, most watched |
+| `midnight_bazarr_tool` | Subtitle status and history |
+| `midnight_sabnzbd_tool` | Download queue and history |
+| `midnight_overseerr_tool` | Content requests and search |
+
+### Key Features
+
+- **Real-time library queries** - Never guesses, always calls tools for current data
+- **Anti-hallucination rules** - Explicit prompt engineering to prevent made-up information
+- **Quote normalization** - Handles curly quotes and special characters in searches
+- **Episode synopses** - Full episode details including plot summaries from Plex
+- **Multi-service integration** - Seamlessly queries across Plex, Radarr, Sonarr, and more
+- **Date accuracy** - Returns actual "added on" dates from Plex, not download dates
+
+### Example Queries
+
+```
+"What movies do we have with Tom Hanks?"
+"What's new in the library?"
+"What's the Bob's Burgers episode 'It's a Stunterful Life' about?"
+"Show me Christmas movies"
+"What's currently downloading?"
+"Who's watching right now?"
+```
+
+See [`midnight/README.md`](midnight/README.md) for full documentation and system prompt.
 
 ## 📚 Technical Skills Demonstrated
 
