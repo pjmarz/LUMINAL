@@ -2,7 +2,7 @@
 title: Midnight Plex Tool
 description: Unified search and library access for Plex Media Server
 author: Peter Marino
-version: 1.2.0
+version: 1.6.0
 """
 
 import requests
@@ -336,49 +336,96 @@ class Tools:
         except Exception as e:
             return f"Error searching for director: {str(e)}"
 
-    def get_recently_added(self, limit: int = 15) -> str:
+    def get_recently_added(self, limit: int = 15, media_type: str = "all") -> str:
         """
         Get recently added content from Plex.
         Use this when users ask about new additions or what's new.
 
         :param limit: Maximum number of items to return (default 15)
-        :return: Recently added movies and TV episodes
+        :param media_type: Filter by type - "movies", "episodes", "shows", or "all" (default "all")
+        :return: Recently added movies and/or TV content
         """
         try:
-            response = requests.get(
-                f"{self.valves.PLEX_URL}/library/recentlyAdded",
-                headers=self._get_headers(),
-                params={"X-Plex-Container-Start": 0, "X-Plex-Container-Size": limit},
-                timeout=30
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            items = data.get("MediaContainer", {}).get("Metadata", [])
+            media_type_lower = media_type.lower()
+            items = []
+            
+            # For episodes specifically, query the TV section with type=4 (episode)
+            # The generic /library/recentlyAdded only returns seasons, not individual episodes
+            if media_type_lower == "episodes":
+                response = requests.get(
+                    f"{self.valves.PLEX_URL}/library/sections/2/recentlyAdded",
+                    headers=self._get_headers(),
+                    params={"type": 4, "X-Plex-Container-Size": limit},
+                    timeout=30
+                )
+                response.raise_for_status()
+                data = response.json()
+                items = data.get("MediaContainer", {}).get("Metadata", [])
+                
+            # For movies specifically, query the Movies section
+            elif media_type_lower == "movies":
+                response = requests.get(
+                    f"{self.valves.PLEX_URL}/library/sections/1/recentlyAdded",
+                    headers=self._get_headers(),
+                    params={"X-Plex-Container-Size": limit},
+                    timeout=30
+                )
+                response.raise_for_status()
+                data = response.json()
+                items = data.get("MediaContainer", {}).get("Metadata", [])
+                
+            # For shows/tv/series or "all", use the generic endpoint
+            else:
+                fetch_limit = limit * 2 if media_type_lower in ("shows", "tv", "series") else limit
+                response = requests.get(
+                    f"{self.valves.PLEX_URL}/library/recentlyAdded",
+                    headers=self._get_headers(),
+                    params={"X-Plex-Container-Start": 0, "X-Plex-Container-Size": fetch_limit},
+                    timeout=30
+                )
+                response.raise_for_status()
+                data = response.json()
+                items = data.get("MediaContainer", {}).get("Metadata", [])
+                
+                # Filter for TV content if requested
+                if media_type_lower in ("shows", "tv", "series"):
+                    items = [i for i in items if i.get("type") in ("episode", "season", "show")]
+            
+            # Limit results
+            items = items[:limit]
             
             if not items:
-                return "No recently added content found."
+                return f"No recently added {media_type} found."
 
-            result = "Recently added to Plex:\n\n"
+            type_label = {"movies": "movies", "episodes": "episodes", "shows": "TV shows", "tv": "TV shows", "series": "TV shows"}.get(media_type_lower, "content")
+            result = f"Recently added {type_label} to Plex:\n\n"
             
             for item in items:
                 item_type = item.get("type", "unknown")
                 title = item.get("title", "Unknown")
                 
+                # Format the added date
+                added_at = item.get("addedAt", 0)
+                if added_at:
+                    from datetime import datetime
+                    added_date = datetime.fromtimestamp(added_at).strftime("%b %d, %Y")
+                else:
+                    added_date = "Unknown"
+                
                 if item_type == "movie":
                     year = item.get("year", "N/A")
-                    result += f"🎬 **{title}** ({year})\n"
+                    result += f"🎬 **{title}** ({year}) — added {added_date}\n"
                     
                 elif item_type == "episode":
                     show = item.get("grandparentTitle", "Unknown Show")
                     season = item.get("parentIndex", 0)
                     episode = item.get("index", 0)
-                    result += f"📺 **{show}** S{season:02d}E{episode:02d} - {title}\n"
+                    result += f"📺 **{show}** S{season:02d}E{episode:02d} - {title} — added {added_date}\n"
                     
                 elif item_type == "season":
                     show = item.get("parentTitle", "Unknown Show")
                     season = item.get("index", 0)
-                    result += f"📺 **{show}** Season {season}\n"
+                    result += f"📺 **{show}** Season {season} — added {added_date}\n"
 
             return result
 
