@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2025-12-16
 
 ### Added
 - **Midnight Media Assistant**: OpenWebUI-based media library assistant (v1.2.0)
@@ -18,6 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Conceptual system prompt for reliable tool routing
   - Recommended base model: gemma3:12b for optimal performance
   - Anti-hallucination rules to ensure accurate responses
+
+- **Documentation Page Redesign**: Complete visual overhaul of `docs/index.html`
+  - **Lucid-style Architecture Diagram**: CSS-based diagram showing Proxmox cluster "Marz"
+    - glados host with "dev" VM (`/root/LUMINAL/`) running OpenWebUI + Midnight
+    - virgil host with "docker" VM (`/root/HELIOS/`) running media services
+    - HTTP APIs connector between VMs
+  - **Screenshots & Demos Section**: 4 clickable screenshot cards with lightbox modal
+    - OpenWebUI Midnight Chat interface
+    - n8n Workflow Automation dashboard
+    - Qdrant Vector Database dashboard
+    - Home Assistant Integration
+  - **Text Visibility Fixes**: Added `!important` CSS overrides for all text elements
+  - **Icon Improvements**: Fixed AI skill icon, added NVIDIA logo, consistent sizing
+  - **Midnight Media Assistant Section**: Dedicated section with tools and capabilities
 
 - **direnv Integration**: Automatic environment variable loading
   - Added `.envrc` file for automatic `.env` and `env.sh` loading
