@@ -522,6 +522,82 @@
             margin-bottom: 1rem;
         }
 
+        /* Screenshot Cards */
+        .screenshot-card {
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+        }
+
+        .screenshot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+        }
+
+        .screenshot-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .screenshot-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .screenshot-card .card-body p {
+            color: #ffffff !important;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .lightbox.active {
+            display: flex;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .lightbox-caption {
+            color: #ffffff;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 1.5rem;
+            right: 2rem;
+            color: #ffffff;
+            font-size: 2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .lightbox-close:hover {
+            opacity: 1;
+        }
+
         /* Footer */
         footer {
             background: var(--primary-color);
@@ -893,6 +969,51 @@
         </div>
     </section>
 
+    <!-- Screenshots & Demos Section -->
+    <section id="screenshots">
+        <div class="container">
+            <h2 class="text-center">Screenshots & Demos</h2>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3">
+                    <div class="card screenshot-card h-100"
+                        onclick="openLightbox('./media/openwebui.png', 'OpenWebUI Midnight Chat Interface')">
+                        <img src="./media/openwebui.png" alt="OpenWebUI Midnight Chat">
+                        <div class="card-body text-center">
+                            <p class="mb-0">OpenWebUI Midnight Chat</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card screenshot-card h-100"
+                        onclick="openLightbox('./media/n8n.png', 'n8n Workflow Automation')">
+                        <img src="./media/n8n.png" alt="n8n Workflow">
+                        <div class="card-body text-center">
+                            <p class="mb-0">n8n Workflow Automation</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card screenshot-card h-100"
+                        onclick="openLightbox('./media/qdrant.png', 'Qdrant Vector Database')">
+                        <img src="./media/qdrant.png" alt="Qdrant Dashboard">
+                        <div class="card-body text-center">
+                            <p class="mb-0">Qdrant Vector Database</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="card screenshot-card h-100"
+                        onclick="openLightbox('./media/homeassistant.png', 'Home Assistant Integration')">
+                        <img src="./media/homeassistant.png" alt="Home Assistant">
+                        <div class="card-body text-center">
+                            <p class="mb-0">Home Assistant Integration</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Technical Skills Section -->
     <section id="skills">
         <div class="container">
@@ -943,6 +1064,39 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img src="" alt="Screenshot" id="lightbox-img">
+        <p class="lightbox-caption" id="lightbox-caption"></p>
+    </div>
+
+    <script>
+        function openLightbox(src, caption) {
+            const lightbox = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            const captionEl = document.getElementById('lightbox-caption');
+
+            img.src = src;
+            captionEl.textContent = caption;
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close on Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeLightbox();
+            }
+        });
+    </script>
 </body>
 
 </html>
