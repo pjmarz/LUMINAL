@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-17
+
+### Added
+- **Midnight Cast Lookup Tool**: New `get_cast()` function in midnight_plex.py (v1.9.0)
+  - Retrieve full cast list for any movie or TV show in Plex library
+  - Returns actor names with their character/role names
+  - Works for both movies (🎬) and TV shows (📺)
+  - Configurable limit parameter (default: 10 cast members)
+  - Fuzzy title matching for typo tolerance
+  - Example: "Who's in 2012?" → Full cast with John Cusack as Jackson Curtis, etc.
+
+### Changed
+- Updated `README.md` system prompt with `get_cast()` documentation and tool selection guidance
+- Updated `MIDNIGHT_REFERENCE.md` knowledge base with detailed function reference
+
 ## [1.0.0] - 2025-12-16
 
 ### Added
