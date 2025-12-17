@@ -56,6 +56,31 @@ Find all content directed by someone.
 
 ---
 
+#### `get_cast(title, limit)`
+Get the cast of a movie or TV show.
+
+**Parameters:**
+- `title` (str): Movie or TV show title (e.g., "2012", "Breaking Bad")
+- `limit` (int): Maximum cast members to return (default: 10)
+
+**Returns for each cast member:**
+- Actor name
+- Character/role name
+
+**Example output:**
+```
+🎬 **Cast of "2012" (2009):**
+
+1. **John Cusack** as Jackson Curtis
+2. **Chiwetel Ejiofor** as Adrian Helmsley
+3. **Amanda Peet** as Kate Curtis
+...
+```
+
+> ⚠️ Use this when users ask "who's in [movie]?" or "cast of [show]". This is different from `search_by_actor()` which finds what content an actor is in.
+
+---
+
 #### `get_on_deck()`
 Get content currently in progress (continue watching).
 

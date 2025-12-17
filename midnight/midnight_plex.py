@@ -2,7 +2,7 @@
 title: Midnight Plex Tool
 description: Unified search and library access for Plex Media Server
 author: Peter Marino
-version: 1.8.0
+version: 1.9.0
 """
 
 import requests
@@ -335,6 +335,92 @@ class Tools:
 
         except Exception as e:
             return f"Error searching for director: {str(e)}"
+
+    def get_cast(self, title: str, limit: int = 10) -> str:
+        """
+        Get the cast of a movie or TV show.
+        Use this when users ask "who's in [title]?", "cast of [title]", or "who starred in [title]?".
+
+        :param title: The movie or TV show title (e.g., "2012", "Breaking Bad")
+        :param limit: Maximum number of cast members to return (default 10)
+        :return: List of actors and their roles in the title
+        """
+        try:
+            # Search for the title in Plex
+            response = requests.get(
+                f"{self.valves.PLEX_URL}/hubs/search",
+                headers=self._get_headers(),
+                params={"query": title, "limit": 10},
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            hubs = data.get("MediaContainer", {}).get("Hub", [])
+            
+            # Find the best matching movie or show
+            best_match = None
+            match_type = None
+            
+            for hub in hubs:
+                hub_type = hub.get("type", "")
+                items = hub.get("Metadata", [])
+                
+                if hub_type in ("movie", "show") and items:
+                    # Build candidates for fuzzy matching
+                    candidates = [(item.get("title", ""), item) for item in items]
+                    matches = self._fuzzy_match(title, candidates, threshold=0.5)
+                    
+                    if matches:
+                        best_match = matches[0][1]  # Get the item data
+                        match_type = hub_type
+                        break
+            
+            if not best_match:
+                return f"No movie or TV show found matching '{title}' in Plex library."
+            
+            # Get the rating key to fetch full metadata with cast
+            rating_key = best_match.get("ratingKey")
+            if not rating_key:
+                return f"Found '{best_match.get('title')}' but couldn't retrieve cast information."
+            
+            # Fetch full metadata (XML endpoint gives us Role data)
+            metadata_response = requests.get(
+                f"{self.valves.PLEX_URL}/library/metadata/{rating_key}",
+                headers={"X-Plex-Token": self.valves.PLEX_TOKEN, "Accept": "application/json"},
+                timeout=30
+            )
+            metadata_response.raise_for_status()
+            metadata = metadata_response.json()
+            
+            item_data = metadata.get("MediaContainer", {}).get("Metadata", [])
+            if not item_data:
+                return f"Could not retrieve details for '{title}'."
+            
+            item = item_data[0]
+            item_title = item.get("title", title)
+            item_year = item.get("year", "N/A")
+            roles = item.get("Role", [])
+            
+            if not roles:
+                return f"No cast information available for '{item_title}' ({item_year})."
+            
+            # Build the result
+            type_emoji = "🎬" if match_type == "movie" else "📺"
+            result = f"{type_emoji} **Cast of \"{item_title}\" ({item_year}):**\n\n"
+            
+            for i, role in enumerate(roles[:limit], 1):
+                actor_name = role.get("tag", "Unknown Actor")
+                character = role.get("role", "Unknown Role")
+                result += f"{i}. **{actor_name}** as {character}\n"
+            
+            if len(roles) > limit:
+                result += f"\n*... and {len(roles) - limit} more cast members*"
+            
+            return result
+
+        except Exception as e:
+            return f"Error fetching cast: {str(e)}"
 
     def get_recently_added(self, limit: int = 15, media_type: str = "all") -> str:
         """
