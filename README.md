@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/pjmarz/LUMINAL">
-    <h1>LUMINAL</h1>
+    <img src="./docs/media/LUMINAL.apng" alt="LUMINAL" width="400">
   </a>
 </div>
 
