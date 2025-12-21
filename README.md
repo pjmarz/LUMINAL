@@ -276,5 +276,5 @@ For a detailed log of the technical evolution of this project, including specifi
 ---
 
 <div align="center">
-  <img src="./docs/media/moon.apng" alt="Moon Logo" width="1200">
+  <img src="./docs/media/moon.apng" alt="Moon Logo" width="200">
 </div>
