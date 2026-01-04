@@ -100,19 +100,19 @@ prune_docker_system() {
     log "Pruning unused Docker resources..."
     
     log "Pruning stopped containers..."
-    docker container prune -f 2>&1 | tee -a "$LOG_FILE"
+    docker container prune -f --filter "label=com.docker.compose.project=luminal" 2>&1 | tee -a "$LOG_FILE"
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         log "Warning: Container pruning failed"
     fi
     
     log "Pruning unused images..."
-    docker image prune -f 2>&1 | tee -a "$LOG_FILE"
+    docker image prune -f --filter "label=com.docker.compose.project=luminal" 2>&1 | tee -a "$LOG_FILE"
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         log "Warning: Image pruning failed"
     fi
 
     log "Pruning unused networks..."
-    docker network prune -f 2>&1 | tee -a "$LOG_FILE"
+    docker network prune -f --filter "label=com.docker.compose.project=luminal" 2>&1 | tee -a "$LOG_FILE"
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
         log "Warning: Network pruning failed"
     fi

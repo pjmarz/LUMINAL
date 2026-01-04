@@ -10,18 +10,6 @@
 
 name: luminal
 
-# Common settings and environment variables
-# Using YAML anchors (&) for DRY (Don't Repeat Yourself) configuration
-x-common: &common-settings
-  restart: unless-stopped # Ensures services automatically restart unless manually stopped
-  environment: &common-env
-    PUID: ${PUID} # Process User ID - Controls file ownership
-    PGID: ${PGID} # Process Group ID - Controls file ownership
-    TZ: ${TZ} # Timezone setting for accurate scheduling/logs
-    UMASK: ${UMASK} # Controls default file permissions
-  labels:
-
-    &common-labels 
 services:
   # ==== N8N ====
   # Workflow automation platform with custom AI nodes
@@ -42,12 +30,17 @@ services:
       - N8N_HOST=0.0.0.0
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://192.168.4.155:5678/
+      - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
+      - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
     ports:
       - ${N8N_PORT:-5678}:5678
     volumes:
       - n8n_storage:/home/node/.n8n # Persistent storage for workflows and credentials
       - ./secrets:/home/node/.n8n/credentials # Mount secrets as n8n credentials directory
       - ${SHARED_DIR:-./shared}:/data/shared # Shared directory for workflow data exchange
+    secrets:
+      - n8n_encryption_key
+      - n8n_jwt_secret
 
   # ==== OLLAMA ====
   # Vector database for semantic search and embeddings storage

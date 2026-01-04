@@ -206,8 +206,14 @@ class Tools:
         if not matches:
             return f"No '{genre}' movies found in the downloaded library."
 
+        def rating_value(value: object) -> float:
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return 0.0
+
         result = f"Found {len(matches)} '{genre}' movie(s):\n\n"
-        for m in sorted(matches, key=lambda x: str(x.get("rating", 0)), reverse=True)[:20]:
+        for m in sorted(matches, key=lambda x: rating_value(x.get("rating")), reverse=True)[:20]:
             rating_str = f"⭐ {m['rating']}" if m['rating'] != "N/A" else ""
             result += f"• **{m['title']}** ({m['year']}) {rating_str}\n"
 

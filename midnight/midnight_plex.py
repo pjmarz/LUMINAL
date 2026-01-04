@@ -26,6 +26,7 @@ class Tools:
 
     def __init__(self):
         self.valves = self.Valves()
+        self._section_cache = {}
 
     def _get_headers(self) -> dict:
         """Get API headers."""
@@ -33,6 +34,32 @@ class Tools:
             "X-Plex-Token": self.valves.PLEX_TOKEN,
             "Accept": "application/json"
         }
+
+    def _get_section_id(self, section_type: str) -> Optional[str]:
+        """Get the Plex library section ID for a given type (movie/show)."""
+        if section_type in self._section_cache:
+            return self._section_cache[section_type]
+
+        try:
+            response = requests.get(
+                f"{self.valves.PLEX_URL}/library/sections",
+                headers=self._get_headers(),
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+            sections = data.get("MediaContainer", {}).get("Directory", [])
+
+            for section in sections:
+                if section.get("type") == section_type:
+                    key = section.get("key")
+                    if key:
+                        self._section_cache[section_type] = key
+                        return key
+        except Exception:
+            return None
+
+        return None
 
     def _fuzzy_match(self, query: str, candidates: list, threshold: float = 0.6) -> list:
         """
@@ -438,8 +465,11 @@ class Tools:
             # For episodes specifically, query the TV section with type=4 (episode)
             # The generic /library/recentlyAdded only returns seasons, not individual episodes
             if media_type_lower == "episodes":
+                section_id = self._get_section_id("show")
+                if not section_id:
+                    return "Error: Could not find a Plex TV library section for episodes."
                 response = requests.get(
-                    f"{self.valves.PLEX_URL}/library/sections/2/recentlyAdded",
+                    f"{self.valves.PLEX_URL}/library/sections/{section_id}/recentlyAdded",
                     headers=self._get_headers(),
                     params={"type": 4, "X-Plex-Container-Size": limit},
                     timeout=30
@@ -450,8 +480,11 @@ class Tools:
                 
             # For movies specifically, query the Movies section
             elif media_type_lower == "movies":
+                section_id = self._get_section_id("movie")
+                if not section_id:
+                    return "Error: Could not find a Plex movie library section."
                 response = requests.get(
-                    f"{self.valves.PLEX_URL}/library/sections/1/recentlyAdded",
+                    f"{self.valves.PLEX_URL}/library/sections/{section_id}/recentlyAdded",
                     headers=self._get_headers(),
                     params={"X-Plex-Container-Size": limit},
                     timeout=30
@@ -579,8 +612,11 @@ class Tools:
                 show_name = show_name.replace("'", "'").replace("'", "'")
             
             # Search for the episode in the TV section
+            section_id = self._get_section_id("show")
+            if not section_id:
+                return "Error: Could not find a Plex TV library section."
             response = requests.get(
-                f"{self.valves.PLEX_URL}/library/sections/2/search",
+                f"{self.valves.PLEX_URL}/library/sections/{section_id}/search",
                 headers=self._get_headers(),
                 params={"type": 4, "query": episode_title},
                 timeout=30
