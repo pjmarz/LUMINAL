@@ -26,23 +26,22 @@ services:
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS:-true}
       - N8N_RUNNERS_ENABLED=${N8N_RUNNERS_ENABLED:-true}
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false} # Disable secure cookies for local development
-      - N8N_EDITOR_BASE_URL=http://192.168.4.155:5678
+      - N8N_EDITOR_BASE_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}
       - N8N_HOST=0.0.0.0
       - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://192.168.4.155:5678/
+      - WEBHOOK_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}/
       - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
       - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
     ports:
       - ${N8N_PORT:-5678}:5678
     volumes:
       - n8n_storage:/home/node/.n8n # Persistent storage for workflows and credentials
-      - ./secrets:/home/node/.n8n/credentials # Mount secrets as n8n credentials directory
       - ${SHARED_DIR:-./shared}:/data/shared # Shared directory for workflow data exchange
     secrets:
       - n8n_encryption_key
       - n8n_jwt_secret
 
-  # ==== OLLAMA ====
+  # ==== QDRANT ====
   # Vector database for semantic search and embeddings storage
   # Used by OpenWebUI for RAG (Retrieval-Augmented Generation) capabilities
   qdrant:
@@ -55,9 +54,10 @@ services:
       - ${QDRANT_PORT:-6333}:6333 # Vector database API port
     volumes:
       - qdrant_storage:/qdrant/storage # Persistent storage for vector embeddings
-    # ==== OPENWEBUI ====
-    # Self-hosted AI chat interface with RAG capabilities
-    # Provides chat interface for Ollama models with Qdrant vector database integration
+
+  # ==== OPENWEBUI ====
+  # Self-hosted AI chat interface with RAG capabilities
+  # Provides chat interface for Ollama models with Qdrant vector database integration
   openwebui:
     image: ghcr.io/open-webui/open-webui:latest
     container_name: openwebui
@@ -178,6 +178,23 @@ services:
     depends_on:
       - ollama
       - ollama-pull-gemma
+
+  # Pull translategemma:12b model (8.1GB) - Dedicated translation model for 55 languages
+  ollama-pull-translategemma:
+    image: ollama/ollama:latest
+    networks: [ 'luminal_default' ]
+    container_name: ollama-pull-translategemma
+    volumes:
+      - ollama_storage:/root/.ollama # Share storage with main Ollama service
+    entrypoint: /bin/sh
+    environment:
+      - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
+    command:
+      - "-c"
+      - "sleep 12; ollama pull ${OLLAMA_MODEL_TRANSLATEGEMMA:-translategemma:12b}"
+    depends_on:
+      - ollama
+      - ollama-pull-gpt-oss
 
 # Networks for service communication
 networks:
