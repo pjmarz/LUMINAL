@@ -32,6 +32,7 @@ services:
       - WEBHOOK_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}/
       - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
       - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
+      - N8N_NODES_INCLUDE=n8n-nodes-base.executeCommand # Re-enable Execute Command node (disabled by default in n8n 2.0)
     ports:
       - ${N8N_PORT:-5678}:5678
     volumes:
@@ -75,6 +76,11 @@ services:
       - RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE:-searxng}
       - VECTOR_DB=${VECTOR_DB:-qdrant}
       - QDRANT_URI=${QDRANT_URI:-http://qdrant:6333}
+      # Cloudflare Access SSO - Trusted header authentication
+      - WEBUI_URL=https://openwebui.welcometomarz.net
+      - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
+      - WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
+      - ENABLE_OAUTH_SIGNUP=true
     secrets:
       - openwebui_secret_key # Docker Secret for authentication
     deploy:
@@ -104,6 +110,7 @@ services:
       - UMASK=${UMASK} # Controls default file permissions
     volumes:
       - homeassistant_storage:/config # Persistent storage for Home Assistant configuration
+      - ./luminal_resolv.conf:/etc/resolv.conf:ro # Force custom DNS configuration
 
   # ==== OLLAMA ====
   # Local LLM inference server with NVIDIA GPU acceleration

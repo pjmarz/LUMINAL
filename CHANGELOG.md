@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-24
+
+### Added
+- **Cloudflare Access SSO Integration**: Google OAuth authentication for OpenWebUI
+  - Trusted header authentication via Cloudflare Access
+  - Automatic user provisioning on first OAuth login
+  - Zero Trust security model - all access requires authentication
+  - Configurable access policies for email/domain allowlisting
+
+### Changed
+- **OpenWebUI Authentication**: Migrated from local accounts to Cloudflare Access SSO
+  - Added `WEBUI_URL` for public URL configuration
+  - Added `WEBUI_AUTH_TRUSTED_EMAIL_HEADER` for Cloudflare email passthrough
+  - Added `WEBUI_AUTH_TRUSTED_NAME_HEADER` for Cloudflare name passthrough
+  - Added `ENABLE_OAUTH_SIGNUP` for automatic account creation
+
+### Security
+- **Zero Trust Architecture**: OpenWebUI now requires Cloudflare Access authentication
+  - All traffic must pass through Cloudflare tunnel
+  - Direct IP access disabled when trusted headers configured
+  - Access policies managed in Cloudflare Zero Trust dashboard
+
 ## [1.1.0] - 2025-12-17
 
 ### Added

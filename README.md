@@ -56,6 +56,12 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
       <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
       <td>Home Automation Platform</td>
     </tr>
+    <tr>
+      <td rowspan="1"><b>🔐 Security</b></td>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/cloudflare.png" width="32" height="32" alt="Cloudflare"></td>
+      <td><b><a href="https://www.cloudflare.com/zero-trust/">Cloudflare Access</a></b></td>
+      <td>Zero Trust SSO Authentication</td>
+    </tr>
   </tbody>
 </table>
 
@@ -161,7 +167,7 @@ Once your stack is running, you can access the following services:
 - **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
 - **Midnight Media Assistant**: Natural language interface to query Plex library, actor/director searches, watch history, and request new content via Overseerr
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
-- **Secure Authentication**: JWT-based authentication with secure secret keys
+- **Cloudflare Access SSO**: Google OAuth authentication via Cloudflare Zero Trust with automatic user provisioning
 
 ### AI-Powered Home Automation Examples
 
@@ -177,6 +183,34 @@ Once your stack is running, you can access the following services:
 - Secrets stored in `/etc/LUMINAL/secrets/` (centralized location, symlinked from project root)
 - Environment variables centralized at `/etc/LUMINAL/env.sh` (symlinked from project root)
 - NVIDIA GPU passthrough for accelerated AI workloads (Ollama, OpenWebUI)
+
+## 🔐 Authentication (SSO)
+
+OpenWebUI uses Cloudflare Access for Zero Trust authentication:
+
+### How It Works
+
+1. Users visit the public OpenWebUI URL
+2. Cloudflare Access intercepts and redirects to Google sign-in
+3. After authentication, Cloudflare passes user email via trusted header
+4. OpenWebUI auto-creates/logs in the user based on email
+
+### Configuration
+
+OpenWebUI trusts Cloudflare's authentication headers:
+
+```yaml
+- WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
+- WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
+- ENABLE_OAUTH_SIGNUP=true
+```
+
+### Managing Access
+
+Access policies are managed in Cloudflare Zero Trust Dashboard:
+- **Access controls** → **Policies** → Edit policy
+- Add/remove email addresses or domains
+- Supports: specific emails, email domains, or "Everyone"
 
 ## 💡 Implementation Details
 
@@ -268,6 +302,7 @@ See [`midnight/README.md`](midnight/README.md) for full documentation and system
 - Proper network isolation between services
 - Environment variable security patterns
 - Persistent volumes configured for data security
+- Zero Trust authentication via Cloudflare Access SSO
 
 ## Technical Evolution
 
