@@ -60,7 +60,7 @@ log "Project root: $LUMINAL_ROOT"
 # Define models to update (use env vars with defaults matching docker-compose.yml)
 MODELS=(
     "${OLLAMA_MODEL_LLAMA:-llama3.1:8b}"
-    "${OLLAMA_MODEL_GEMMA:-gemma3:12b}"
+    "${OLLAMA_MODEL_GEMMA:-gemma4:e4b}"
     "${OLLAMA_MODEL_GPT_OSS:-gpt-oss:20b}"
 )
 

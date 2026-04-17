@@ -188,11 +188,13 @@ capture_status() {
 pull_images() {
     log "Pulling latest images for all services..."
 
-    if docker compose pull 2>&1 | tee -a "$LOG_FILE"; then
+    docker compose pull 2>&1 | tee -a "$LOG_FILE"
+    local rc=${PIPESTATUS[0]}
+    if [[ $rc -eq 0 ]]; then
         log "Image pull completed successfully"
         return 0
     else
-        log "ERROR: Image pull failed"
+        log "ERROR: Image pull failed (exit code ${rc})"
         return 1
     fi
 }
@@ -219,11 +221,13 @@ recreate_services() {
         fi
 
         log "Service recreation attempt ${attempt}/${max_attempts}..."
-        if docker compose up -d --remove-orphans --timeout 30 2>&1 | tee -a "$LOG_FILE"; then
+        docker compose up -d --remove-orphans --timeout 30 2>&1 | tee -a "$LOG_FILE"
+        local rc=${PIPESTATUS[0]}
+        if [[ $rc -eq 0 ]]; then
             log "Service recreation completed successfully (attempt ${attempt}/${max_attempts})"
             return 0
         else
-            log "WARNING: Service recreation attempt ${attempt}/${max_attempts} failed"
+            log "WARNING: Service recreation attempt ${attempt}/${max_attempts} failed (exit code ${rc})"
         fi
 
         ((attempt++))
@@ -272,18 +276,23 @@ health_check() {
         done <<< "$restarting"
     fi
 
-    # Check for containers that exited (should be running)
-    local exited
-    exited=$(docker compose ps --format json 2>/dev/null \
+    # Check for containers that exited unexpectedly (should be running).
+    # One-shot init containers (restart policy "no") are excluded — their exit is intentional.
+    local exited_names
+    exited_names=$(docker compose ps -a --format json 2>/dev/null \
         | jq -r 'select(.State == "exited") | .Name' 2>/dev/null || true)
 
-    if [[ -n "$exited" ]]; then
-        log "WARNING: Exited containers detected:"
-        while IFS= read -r name; do
-            log "  - ${name} (exited)"
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        local policy
+        policy=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$name" 2>/dev/null || true)
+        if [[ "$policy" == "unless-stopped" || "$policy" == "always" || "$policy" == "on-failure" ]]; then
+            log "WARNING: ${name} exited unexpectedly (restart policy: ${policy})"
             ((problems++))
-        done <<< "$exited"
-    fi
+        else
+            log "INFO: ${name} exited (one-shot init container — expected)"
+        fi
+    done <<< "$exited_names"
 
     if [[ "$problems" -eq 0 ]]; then
         log "Health check passed — all containers running"
