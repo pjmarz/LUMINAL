@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-17
+
+### Added
+- **Matter Server Service**: Added `python-matter-server` container for Home Assistant Matter protocol integration
+  - Required for Matter/Thread device control in Docker environments
+  - Runs on host network to communicate with Home Assistant
+  - Persistent storage via `luminal_matter_storage` volume
+- **Ollama DNS Configuration**: Added explicit DNS entries (`192.168.4.1`, `1.1.1.1`) to Ollama service for reliable model pulls
+- **`update-ollama-models.sh`**: New maintenance script to update all configured Ollama models to latest versions
+  - Sources environment from `.env`, verifies Ollama is running before pulling
+  - Logs to `logs/update-ollama-models.log`
+
+### Changed
+- **Gemma Model Upgrade**: Upgraded from `gemma3:12b` (8.1GB) to `gemma4:e4b` (9.6GB)
+  - Frontier-level multimodal model with native tool use
+  - Now the base model for Midnight Media Assistant
+- **`docker-rebuild.sh` Rewrite**: Complete rewrite with safe, non-destructive update logic
+  - Pulls images before touching any running containers
+  - Only recreates containers whose images actually changed (zero downtime for unchanged services)
+  - HELIOS/VENUS compatible via `_common.sh` with standalone fallback for LUMINAL
+  - New flags: `--dry-run`, `--skip-prune`, `--skip-health-check`, `--project-dir`
+  - Post-update health check: detects unhealthy, restarting, and exited containers
+  - Severity-based exit codes: 0=success, 1=partial failure, 2=complete failure
+  - 3-retry logic with 15s delays for transient failures
+  - Plex internal update check (`check_plex_update`) for projects with Plex containers
+  - NVIDIA CDI spec regeneration after driver updates
+  - `ensure_external_networks` helper for shared Docker networks
+
+### Removed
+- **`ollama-pull-translategemma` Service**: Removed dedicated translation model puller
+  - `translategemma:12b` translation model is no longer part of the default stack
+
 ## [1.2.0] - 2026-01-24
 
 ### Added

@@ -51,10 +51,15 @@ LUMINAL is a self-hosted AI automation platform built with Docker and Docker Com
       <td>Containerization Platform</td>
     </tr>
     <tr>
-      <td rowspan="1"><b>🏠 Home Automation</b></td>
+      <td rowspan="2"><b>🏠 Home Automation</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="32" height="32" alt="Home Assistant"></td>
       <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
       <td>Home Automation Platform</td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/matter.png" width="32" height="32" alt="Matter Server"></td>
+      <td><b><a href="https://github.com/home-assistant-libs/python-matter-server">Matter Server</a></b></td>
+      <td>Matter Protocol Integration for Home Assistant</td>
     </tr>
     <tr>
       <td rowspan="1"><b>🔐 Security</b></td>
@@ -163,7 +168,7 @@ Once your stack is running, you can access the following services:
 
 ### Key OpenWebUI Features
 
-- **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma3:12b, and gpt-oss:20b
+- **Multi-Model Support**: Seamlessly switch between llama3.1:8b, gemma4:e4b, and gpt-oss:20b
 - **RAG Integration**: Built-in retrieval-augmented generation using your Qdrant vector database
 - **Midnight Media Assistant**: Natural language interface to query Plex library, actor/director searches, watch history, and request new content via Overseerr
 - **GPU Acceleration**: Direct GPU passthrough for optimal performance
@@ -228,7 +233,7 @@ LUMINAL follows Docker best practices for configuration directory ownership:
 LUMINAL supports three LLM models via Ollama:
 
 - **llama3.1:8b** (4.9GB) - Fast and capable general-purpose model
-- **gemma3:12b** (8.1GB) - High-performance model for complex tasks
+- **gemma4:e4b** (9.6GB) - Frontier-level multimodal model with native tool use
 - **gpt-oss:20b** (~20GB) - Maximum capability for advanced reasoning
 
 Models are automatically pulled on first startup and cached in the `ollama_storage` volume.
@@ -241,7 +246,7 @@ Models are automatically pulled on first startup and cached in the `ollama_stora
 
 | Component | Description |
 |-----------|-------------|
-| **Base Model** | gemma3:12b via Ollama |
+| **Base Model** | gemma4:e4b via Ollama |
 | **Interface** | OpenWebUI with custom system prompt |
 | **Tools** | 7 Python-based function tools |
 | **Knowledge** | RAG-enabled reference documentation |
@@ -279,6 +284,15 @@ Models are automatically pulled on first startup and cached in the `ollama_stora
 ```
 
 See [`midnight/README.md`](midnight/README.md) for full documentation and system prompt.
+
+## 🔧 Maintenance Scripts
+
+LUMINAL includes two automation scripts in `scripts/` for common maintenance tasks:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/docker-rebuild.sh` | Safe, non-destructive update: pulls new images, recreates only changed containers (no `down`), runs health checks, prunes dangling images. Supports `--dry-run`, `--skip-prune`, `--skip-health-check`. Exit codes: 0=success, 1=partial, 2=failure. |
+| `scripts/update-ollama-models.sh` | Updates all configured Ollama models to their latest versions. Verifies the Ollama container is running before pulling. Logs to `logs/`. |
 
 ## 📚 Technical Skills Demonstrated
 
