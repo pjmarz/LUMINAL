@@ -6,26 +6,26 @@
 
 ---
 
-> Note: This repository is a showcase of the LUMINAL architecture and user experience. It is not a turnkey deployment and is not intended to be cloned or run as-is.
+> Note: this repo is a showcase of the LUMINAL setup. It's not a turnkey deployment and isn't meant to be cloned and run as-is.
 
 ## 🎯 Overview
 
-LUMINAL is a self-hosted AI automation platform that combines workflow orchestration, local LLM inference, retrieval-augmented generation, and smart-home control into a single Docker-Compose stack running on a Proxmox VM with NVIDIA GPU passthrough.
+LUMINAL is a self-hosted AI stack. It runs on a Proxmox VM with an NVIDIA GPU and stitches together workflow automation, local LLM inference, RAG, and smart-home control in one Docker Compose project.
 
-It exists as a living answer to a question: *how much of a modern AI product stack can run on your own hardware, behind your own auth, with no dependency on commercial inference APIs?* Every choice — local models over hosted APIs, Docker Secrets over `.env` passwords, Zero Trust SSO over local accounts, non-destructive update scripts over `docker compose down`— is an intentional trade-off in favor of self-hosted control, security, and reproducibility.
+The goal: run a real AI product entirely on self-hosted hardware. Models, auth, data, everything. No hosted inference APIs, no commercial accounts, nothing leaving the network.
 
-The marquee feature is **Midnight**, a custom tool-using AI assistant built on OpenWebUI that queries a real media library (Plex, Radarr, Sonarr, Tautulli, Bazarr, SABnzbd, Overseerr) through 7 Python function tools with anti-hallucination prompt engineering baked in.
+Midnight is a custom assistant written on top of OpenWebUI that talks to the [HELIOS](https://github.com/pjmarz/HELIOS) media library through 7 Python tools (Plex, Radarr, Sonarr, Tautulli, Bazarr, SABnzbd, Overseerr). It answers questions by calling live APIs instead of making stuff up.
 
 ## 🧩 Architecture
 
-LUMINAL runs as a set of networked Docker containers on a Proxmox VM. The stack layers into roughly four tiers:
+Everything runs as Docker containers on a Proxmox VM. The stack breaks down like this:
 
-- **Edge / Auth** — Cloudflare Access sits in front of the public-facing OpenWebUI endpoint, handling Google OAuth via trusted-header SSO. No local passwords.
-- **Interface** — OpenWebUI is the chat frontend. It hosts the Midnight assistant, handles RAG retrieval from Qdrant, and routes all LLM requests to Ollama.
-- **Inference & Data** — Ollama serves three LLM models locally with NVIDIA GPU passthrough. Qdrant stores vector embeddings for RAG. n8n provides visual workflow automation — the glue for cross-service logic.
-- **Physical World** — Home Assistant (with the companion Matter Server) controls real-world devices over host networking so mDNS/Bonjour discovery works.
+- **Auth** — Cloudflare Access sits in front. Google OAuth via trusted headers. No local passwords.
+- **Interface** — OpenWebUI is the frontend. It hosts Midnight, does RAG against Qdrant, and sends LLM calls to Ollama.
+- **Inference & data** — Ollama runs three local LLMs with GPU passthrough. Qdrant holds the RAG vectors. n8n handles visual workflow automation.
+- **Physical world** — Home Assistant plus Matter Server, both on host networking so mDNS device discovery works.
 
-Midnight, specifically, talks to a sibling media stack ([HELIOS](https://github.com/pjmarz/HELIOS)) over HTTP APIs — LUMINAL is the brain, HELIOS is the library.
+Midnight talks to a separate media stack ([HELIOS](https://github.com/pjmarz/HELIOS)) over HTTP APIs. LUMINAL is the brain, HELIOS is the library.
 
 ### System Components
 
@@ -42,77 +42,77 @@ Midnight, specifically, talks to a sibling media stack ([HELIOS](https://github.
       <td rowspan="3"><b>🤖 AI Services</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/n8n.png" width="32" height="32" alt="n8n"></td>
       <td><b><a href="https://github.com/n8n-io/n8n">n8n</a></b></td>
-      <td>Visual workflow engine — glues services together for automation</td>
+      <td>Visual workflow engine. Glue for cross-service automation.</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/open-webui.png" width="32" height="32" alt="OpenWebUI"></td>
       <td><b><a href="https://github.com/open-webui/open-webui">OpenWebUI</a></b></td>
-      <td>Chat interface + tool runtime; hosts Midnight, handles RAG</td>
+      <td>Chat interface and tool runtime. Hosts Midnight, handles RAG.</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/ollama.png" width="32" height="32" alt="Ollama"></td>
       <td><b><a href="https://github.com/ollama/ollama">Ollama</a></b></td>
-      <td>Local LLM inference server with GPU acceleration</td>
+      <td>Local LLM inference with GPU acceleration.</td>
     </tr>
     <tr>
       <td rowspan="2"><b>🧠 AI Infrastructure</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant"></td>
       <td><b><a href="https://github.com/qdrant/qdrant">Qdrant</a></b></td>
-      <td>Vector DB backing OpenWebUI's retrieval-augmented generation</td>
+      <td>Vector DB for OpenWebUI's RAG.</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="36" height="24" alt="Docker"></td>
       <td><b><a href="https://www.docker.com/">Docker</a></b></td>
-      <td>Containerization + named-volume persistence + GPU passthrough</td>
+      <td>Containers, named volumes, GPU passthrough.</td>
     </tr>
     <tr>
       <td rowspan="2"><b>🏠 Home Automation</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png" width="32" height="32" alt="Home Assistant"></td>
       <td><b><a href="https://www.home-assistant.io/">Home Assistant</a></b></td>
-      <td>Device control hub — runs on host network for device discovery</td>
+      <td>Device control hub. Runs on host network for discovery.</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/matter.png" width="32" height="32" alt="Matter Server"></td>
       <td><b><a href="https://github.com/home-assistant-libs/python-matter-server">Matter Server</a></b></td>
-      <td>Matter protocol bridge for Home Assistant</td>
+      <td>Matter protocol bridge for HA.</td>
     </tr>
     <tr>
       <td rowspan="1"><b>🔐 Security</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/cloudflare.png" width="32" height="32" alt="Cloudflare"></td>
       <td><b><a href="https://www.cloudflare.com/zero-trust/">Cloudflare Access</a></b></td>
-      <td>Zero Trust SSO — Google OAuth in front of OpenWebUI</td>
+      <td>Zero Trust SSO. Google OAuth in front of OpenWebUI.</td>
     </tr>
   </tbody>
 </table>
 
 ## 🧠 AI Models
 
-Three models are pulled automatically on first boot and cached in a persistent volume. Each plays a different role:
+Three models get pulled on first boot and cached on disk. Each does something different:
 
-- **`llama3.1:8b`** (4.9 GB) — fast, capable general-purpose model for lightweight chat and quick tool calls.
-- **`gemma4:e4b`** (9.6 GB) — frontier-level multimodal model with native tool use. Powers Midnight.
-- **`gpt-oss:20b`** (~20 GB) — heavier reasoning model when raw capability matters more than latency.
+- `llama3.1:8b` (4.9 GB) — fast general-purpose model. Good for quick chat and simple tool calls.
+- `gemma4:e4b` (9.6 GB) — multimodal with native tool use. This is what Midnight runs on.
+- `gpt-oss:20b` (~20 GB) — heavier reasoning when capability matters more than latency.
 
-All three run locally on the same Ollama instance with shared GPU access.
+All three share one Ollama instance and one GPU.
 
 ## 🌙 Midnight Media Assistant
 
-**Midnight** is a custom AI assistant built on top of OpenWebUI that provides intelligent access to a real media library. It demonstrates prompt engineering, function-tool integration, and RAG working together to produce an assistant that queries live data instead of hallucinating it.
+**Midnight** is a custom AI assistant built on top of OpenWebUI that queries the HELIOS media library. It uses function tools for everything. No question gets answered from what the model "knows" if a tool could answer from live data.
 
-### Architecture
+### Setup
 
 | Component | Description |
 |-----------|-------------|
 | **Base Model** | gemma4:e4b via Ollama |
-| **Interface** | OpenWebUI with custom system prompt |
-| **Tools** | 7 Python-based function tools |
-| **Knowledge** | RAG-enabled reference documentation |
+| **Interface** | OpenWebUI with a custom system prompt |
+| **Tools** | 7 Python function tools |
+| **Knowledge** | RAG-indexed reference docs |
 
-### Custom Tools (`midnight/`)
+### Tools (`midnight/`)
 
-| Tool | Purpose |
+| Tool | What it does |
 |------|---------|
-| `midnight_plex_tool` | Search library, get recently added, episode details, actor/director search, cast lookup |
+| `midnight_plex_tool` | Library search, recently added, episode details, cast, actor/director lookup |
 | `midnight_radarr_tool` | Movie details, genres, synopses |
 | `midnight_sonarr_tool` | TV show details, upcoming episodes |
 | `midnight_tautulli_tool` | Watch history, current activity, most watched |
@@ -120,16 +120,15 @@ All three run locally on the same Ollama instance with shared GPU access.
 | `midnight_sabnzbd_tool` | Download queue and history |
 | `midnight_overseerr_tool` | Content requests and search |
 
-### Key Features
+### How it behaves
 
-- **Real-time library queries** — Midnight never guesses; it always calls tools against live APIs
-- **Anti-hallucination rules** — explicit prompt engineering prevents made-up titles, dates, or cast
-- **Quote normalization** — handles curly quotes and special characters in search terms
-- **Episode synopses** — full plot summaries pulled directly from Plex
-- **Multi-service integration** — seamless routing across Plex, Radarr, Sonarr, and the rest
-- **Date accuracy** — returns the actual "added on" date from Plex, not the file's download timestamp
+- Always calls a tool. Never answers a library question from model knowledge.
+- Normalizes curly quotes and special characters before sending to APIs.
+- Pulls real episode synopses from Plex instead of guessing plot summaries.
+- Returns the actual Plex "added on" date, not the file's download timestamp.
+- Says "I don't see that in the library" when something isn't there, instead of inventing a plausible answer.
 
-### Example queries Midnight handles
+### Sample prompts
 
 ```
 "What movies do we have with Tom Hanks?"
@@ -140,51 +139,43 @@ All three run locally on the same Ollama instance with shared GPU access.
 "Who's watching right now?"
 ```
 
-See [`midnight/README.md`](midnight/README.md) for full documentation and system prompt.
+See [`midnight/README.md`](midnight/README.md) for the full system prompt and tool docs.
 
 ## 🏗️ Design Decisions
 
-The interesting part of any self-hosted system isn't *what* runs — it's *why* it runs the way it does. These are the decisions that shaped LUMINAL.
+Why things are set up the way they are.
 
-### Zero Trust auth via Cloudflare Access
+### Cloudflare Access instead of local accounts
 
-OpenWebUI doesn't manage its own passwords. Cloudflare Access intercepts every request, redirects to Google sign-in, and passes the authenticated email to OpenWebUI via a trusted header (`Cf-Access-Authenticated-User-Email`). OpenWebUI auto-provisions the user from that header. This shifts authentication to an identity provider that already does it well, removes local-password attack surface, and centralizes access policy in Cloudflare's dashboard.
+OpenWebUI doesn't have its own login. Cloudflare Access sits in front, redirects to Google, and passes the authenticated email via a trusted header (`Cf-Access-Authenticated-User-Email`). OpenWebUI auto-creates the user from that header. No local passwords to manage, and access policy lives in one place instead of scattered across services.
 
-### Docker Secrets over plaintext env vars
+### Docker Secrets, not env vars
 
-All credentials (n8n encryption key, JWT secret, OpenWebUI session key) are mounted into containers as files via Docker Secrets, not exposed as environment variables. `env` listings, process dumps, and compose logs stay clean. The plaintext files live only in a tightly-permissioned system directory, never in the repo.
+Credentials (n8n encryption key, JWT secret, OpenWebUI session key) are mounted as files via Docker Secrets. They don't show up in `env`, process dumps, or compose logs. The plaintext files live in a locked-down system directory outside the repo.
 
-### Centralized config at `/etc/LUMINAL/` + direnv
+### Centralized config at `/etc/LUMINAL/`
 
-Environment variables and secrets live at `/etc/LUMINAL/env.sh` and `/etc/LUMINAL/secrets/` — symlinked into the project root and excluded from git. `direnv` auto-loads this environment whenever the working directory is entered, so interactive shells, cron jobs, and Docker Compose all see the same values without manual sourcing. One source of truth, zero risk of committing secrets, isolated from the repo.
+The real `env.sh` and `secrets/` directory live at `/etc/LUMINAL/`, symlinked into the project and gitignored. `direnv` picks them up on `cd` into the project, so interactive shells, cron jobs, and Docker Compose all see the same values without explicit sourcing. The pattern came after almost committing secrets one too many times.
 
-### External named volumes for persistence
+### External named volumes
 
-Every stateful service (n8n workflows, Ollama model cache, Qdrant indices, OpenWebUI chat history, Home Assistant config) writes to an externally-declared Docker named volume. Containers can be destroyed and recreated without touching data. Migrations and upgrades become routine instead of risky.
+Every piece of persistent state (n8n workflows, Ollama model cache, Qdrant indices, chat history, HA config) lives in an external Docker named volume. Containers get torn down and recreated without losing anything. Upgrades stop feeling risky.
 
-### Safe, non-destructive updates via `docker-rebuild.sh`
+### Non-destructive rebuild script
 
-Rather than `docker compose down && up`, the rebuild script pulls new images first and then uses `docker compose up -d` so only containers whose images actually changed get recreated. Unchanged services stay running. It adds a post-update health check that distinguishes unexpected failures from intentional one-shot init containers (the Ollama model-pullers), retries transient failures, and returns severity-based exit codes (0/1/2) suitable for cron alerting. A dry-run mode lets you see what *would* change without touching anything.
+`scripts/docker-rebuild.sh` pulls new images first, then runs `docker compose up -d` so only the services whose images actually changed get recreated. Everything else keeps running. It also runs a health check that skips the one-shot Ollama pullers (they're supposed to exit), retries transient failures, and returns 0/1/2 exit codes so cron can alert properly. `--dry-run` shows what would change without touching anything.
 
-### Anti-hallucination prompt engineering for Midnight
+### Anti-hallucination prompt engineering
 
-Midnight's system prompt is structured around the assumption that the model *will* hallucinate if allowed to. Every query must go through a tool call — the prompt explicitly forbids answering from model knowledge when a tool is available. Quote normalization handles curly quotes in user input. RAG with `MIDNIGHT_REFERENCE.md` grounds tool selection. The result is an assistant that says "I don't see that in the library" instead of inventing a plausible-sounding fake result.
+Midnight's system prompt assumes the model will hallucinate if allowed to. Every question has to go through a tool call. The prompt explicitly bans answering from model knowledge when a tool could answer instead. It normalizes curly quotes in input and uses RAG against `MIDNIGHT_REFERENCE.md` to pick the right tool. Trade-off: Midnight is occasionally too strict and refuses things it could reasonably answer. Better than made-up movie titles.
 
-### GPU passthrough for local inference
+### GPU passthrough for inference
 
-Ollama and OpenWebUI both declare NVIDIA GPU reservations in their compose services. Model inference runs at hardware speed with no per-token API cost, no rate limits, and no data leaving the network.
+Ollama and OpenWebUI both reserve an NVIDIA GPU in the compose file. Inference runs at hardware speed. No API costs, no rate limits, nothing leaving the box.
 
-## 📚 Technical Skills Demonstrated
+## 📜 Changelog
 
-- **Infrastructure & DevOps** — Docker Compose patterns, GPU passthrough, external volume management, safe update tooling, centralized environment/secrets
-- **AI & Data Engineering** — local LLM deployment, vector-DB-backed RAG, tool-using agents, anti-hallucination prompt design
-- **Security Engineering** — Zero Trust SSO via Cloudflare Access, Docker Secrets, no plaintext credentials, repo-safe configuration
-- **Software Integration** — 7 Python function tools against 7 different APIs (Plex, Radarr, Sonarr, Tautulli, Bazarr, SABnzbd, Overseerr)
-- **Operational Tooling** — bash automation with health checks, retry logic, severity-based exit codes
-
-## 📜 Technical Evolution
-
-For a version-by-version log of how LUMINAL evolved — including the move to Docker Secrets, the Midnight launch, and the Cloudflare Access migration — see [CHANGELOG.md](./CHANGELOG.md).
+Version history and evolution in [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 
