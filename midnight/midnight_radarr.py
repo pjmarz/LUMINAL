@@ -1,8 +1,11 @@
 """
 title: Midnight Radarr Tool
-description: Search and query movies from Radarr for the Midnight media assistant
 author: Peter Marino
-version: 1.2.0
+description: Search and query movies from Radarr for the Midnight media assistant
+required_open_webui_version: 0.4.0
+requirements: requests, pydantic
+version: 2.0.0
+licence: MIT
 """
 
 import requests
@@ -27,27 +30,37 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
+    async def _emit(self, emitter, description: str, done: bool = False) -> None:
+        """Send a status event to OpenWebUI if an emitter is wired."""
+        if emitter:
+            await emitter({
+                "type": "status",
+                "data": {"description": description, "done": done},
+            })
+
     def _get_headers(self) -> dict:
         """Get API headers."""
         return {"X-Api-Key": self.valves.RADARR_API_KEY}
 
     def _get_all_movies(self) -> list:
-        """Fetch all movies from Radarr."""
-        try:
-            response = requests.get(
-                f"{self.valves.RADARR_URL}/api/v3/movie",
-                headers=self._get_headers(),
-                timeout=30
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            return []
+        """Fetch all movies from Radarr. Raises on transport/HTTP error."""
+        response = requests.get(
+            f"{self.valves.RADARR_URL}/api/v3/movie",
+            headers=self._get_headers(),
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
 
     def _fuzzy_match(self, query: str, candidates: list, threshold: float = 0.6) -> list:
         """
         Find fuzzy matches for a query in a list of candidates.
         Uses difflib for typo tolerance.
+
+        NOTE: Canonical implementation lives in midnight_plex.py. Each tool file
+        carries a copy because OpenWebUI uploads tools as standalone files and
+        cross-tool imports are not supported. Keep these in sync if you change
+        the threshold or scoring logic.
         """
         from difflib import SequenceMatcher
         
@@ -65,7 +78,7 @@ class Tools:
         
         return sorted(matches, key=lambda x: x[2], reverse=True)
 
-    def search_movies_by_title(self, query: str) -> str:
+    async def search_movies_by_title(self, query: str, __event_emitter__=None) -> str:
         """
         Search for movies in the library by TITLE ONLY.
         DO NOT use this for actor/actress searches - use midnight_plex_tool search_by_actor() instead.
@@ -89,9 +102,13 @@ class Tools:
                     break
             return f"For actor searches, please use the Plex tool's search_by_actor function to find movies with '{actor_name}'"
         
-        movies = self._get_all_movies()
+        try:
+            movies = self._get_all_movies()
+        except Exception as e:
+            return f"Radarr error: {e}"
+
         if not movies:
-            return "Error: Could not fetch movies from Radarr. Check API connection."
+            return "Radarr returned no movies. The library may be empty."
 
         # Build candidates for fuzzy matching (title -> movie data)
         candidates = [(movie.get("title", ""), movie) for movie in movies]
@@ -126,7 +143,7 @@ class Tools:
 
         return result
 
-    def list_movies_by_genre(self, genre: str) -> str:
+    async def list_movies_by_genre(self, genre: str, __event_emitter__=None) -> str:
         """
         List all movies of a specific genre.
         Use this when users ask for movies by genre like "Christmas", "Horror", "Comedy".
@@ -134,6 +151,7 @@ class Tools:
         :param genre: Genre name to filter by (e.g., "Christmas", "Action", "Comedy")
         :return: List of movies in that genre
         """
+        await self._emit(__event_emitter__, f"Filtering Radarr library by genre '{genre}'…")
         # Genre synonyms - map common terms to official genre names
         genre_synonyms = {
             "sci-fi": ["science fiction"],
@@ -169,9 +187,13 @@ class Tools:
             "true story": ["documentary", "history"],
         }
         
-        movies = self._get_all_movies()
+        try:
+            movies = self._get_all_movies()
+        except Exception as e:
+            return f"Radarr error: {e}"
+
         if not movies:
-            return "Error: Could not fetch movies from Radarr."
+            return "Radarr returned no movies. The library may be empty."
 
         genre_lower = genre.lower().strip()
         
@@ -220,9 +242,10 @@ class Tools:
         if len(matches) > 20:
             result += f"\n... and {len(matches) - 20} more."
 
+        await self._emit(__event_emitter__, f"Found {len(matches)} match(es)", done=True)
         return result
 
-    def get_movie_details(self, title: str) -> str:
+    async def get_movie_details(self, title: str, __event_emitter__=None) -> str:
         """
         Get detailed information about a specific movie.
         Use this when users want more info about a particular movie.
@@ -230,9 +253,13 @@ class Tools:
         :param title: Exact or partial movie title
         :return: Detailed movie information
         """
-        movies = self._get_all_movies()
+        try:
+            movies = self._get_all_movies()
+        except Exception as e:
+            return f"Radarr error: {e}"
+
         if not movies:
-            return "Error: Could not fetch movies from Radarr."
+            return "Radarr returned no movies. The library may be empty."
 
         # Strip year from query if present (e.g., "Movie Title (2024)" -> "Movie Title")
         import re
@@ -265,7 +292,7 @@ class Tools:
 
         return f"Movie '{title}' not found in library."
 
-    def get_recent_movies(self, days: int = 30) -> str:
+    async def get_recent_movies(self, days: int = 30, __event_emitter__=None) -> str:
         """
         Get movies added to the library recently.
         Use this when users ask about new additions or recently added content.
@@ -275,9 +302,13 @@ class Tools:
         """
         from datetime import datetime, timedelta
         
-        movies = self._get_all_movies()
+        try:
+            movies = self._get_all_movies()
+        except Exception as e:
+            return f"Radarr error: {e}"
+
         if not movies:
-            return "Error: Could not fetch movies from Radarr."
+            return "Radarr returned no movies. The library may be empty."
 
         cutoff = datetime.now() - timedelta(days=days)
         recent = []

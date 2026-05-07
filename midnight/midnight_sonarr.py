@@ -1,8 +1,11 @@
 """
 title: Midnight Sonarr Tool
-description: Search and query TV shows from Sonarr for the Midnight media assistant
 author: Peter Marino
-version: 1.2.0
+description: Search and query TV shows from Sonarr for the Midnight media assistant
+required_open_webui_version: 0.4.0
+requirements: requests, pydantic
+version: 2.0.0
+licence: MIT
 """
 
 import requests
@@ -27,25 +30,35 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
+    async def _emit(self, emitter, description: str, done: bool = False) -> None:
+        """Send a status event to OpenWebUI if an emitter is wired."""
+        if emitter:
+            await emitter({
+                "type": "status",
+                "data": {"description": description, "done": done},
+            })
+
     def _get_headers(self) -> dict:
         """Get API headers."""
         return {"X-Api-Key": self.valves.SONARR_API_KEY}
 
     def _get_all_series(self) -> list:
-        """Fetch all TV series from Sonarr."""
-        try:
-            response = requests.get(
-                f"{self.valves.SONARR_URL}/api/v3/series",
-                headers=self._get_headers(),
-                timeout=30
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            return []
+        """Fetch all TV series from Sonarr. Raises on transport/HTTP error."""
+        response = requests.get(
+            f"{self.valves.SONARR_URL}/api/v3/series",
+            headers=self._get_headers(),
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
 
     def _fuzzy_match(self, query: str, candidates: list, threshold: float = 0.6) -> list:
-        """Find fuzzy matches using difflib for typo tolerance."""
+        """Find fuzzy matches using difflib for typo tolerance.
+
+        NOTE: Canonical implementation lives in midnight_plex.py. Each tool file
+        carries a copy because OpenWebUI uploads tools as standalone files and
+        cross-tool imports are not supported. Keep these in sync.
+        """
         from difflib import SequenceMatcher
         
         query_lower = query.lower()
@@ -62,7 +75,7 @@ class Tools:
         
         return sorted(matches, key=lambda x: x[2], reverse=True)
 
-    def search_tv_shows(self, query: str) -> str:
+    async def search_tv_shows(self, query: str, __event_emitter__=None) -> str:
         """
         Search for TV shows in the library by title.
         Use this when users ask about specific TV shows or series.
@@ -70,9 +83,13 @@ class Tools:
         :param query: TV show title or keyword to search for
         :return: List of matching TV shows with details
         """
-        series = self._get_all_series()
+        try:
+            series = self._get_all_series()
+        except Exception as e:
+            return f"Sonarr error: {e}"
+
         if not series:
-            return "Error: Could not fetch TV shows from Sonarr. Check API connection."
+            return "Sonarr returned no series. The library may be empty."
 
         # Build candidates for fuzzy matching
         candidates = [(show.get("title", ""), show) for show in series]
@@ -106,7 +123,7 @@ class Tools:
 
         return result
 
-    def list_shows_by_genre(self, genre: str) -> str:
+    async def list_shows_by_genre(self, genre: str, __event_emitter__=None) -> str:
         """
         List all TV shows of a specific genre.
         Use this when users ask for shows by genre like "sci-fi", "comedy", "drama".
@@ -114,6 +131,7 @@ class Tools:
         :param genre: Genre name to filter by
         :return: List of TV shows in that genre
         """
+        await self._emit(__event_emitter__, f"Filtering Sonarr library by genre '{genre}'…")
         # Genre synonyms - map common terms to official genre names
         genre_synonyms = {
             "sci-fi": ["science fiction"],
@@ -145,9 +163,13 @@ class Tools:
             "miniseries": ["mini-series"],
         }
         
-        series = self._get_all_series()
+        try:
+            series = self._get_all_series()
+        except Exception as e:
+            return f"Sonarr error: {e}"
+
         if not series:
-            return "Error: Could not fetch TV shows from Sonarr."
+            return "Sonarr returned no series. The library may be empty."
 
         genre_lower = genre.lower().strip()
         
@@ -194,9 +216,10 @@ class Tools:
         if len(matches) > 20:
             result += f"\n... and {len(matches) - 20} more."
 
+        await self._emit(__event_emitter__, f"Found {len(matches)} match(es)", done=True)
         return result
 
-    def get_show_details(self, title: str) -> str:
+    async def get_show_details(self, title: str, __event_emitter__=None) -> str:
         """
         Get detailed information about a specific TV show including seasons.
         Use this when users want details about a particular show.
@@ -204,9 +227,13 @@ class Tools:
         :param title: Exact or partial TV show title
         :return: Detailed show information with season breakdown
         """
-        series = self._get_all_series()
+        try:
+            series = self._get_all_series()
+        except Exception as e:
+            return f"Sonarr error: {e}"
+
         if not series:
-            return "Error: Could not fetch TV shows from Sonarr."
+            return "Sonarr returned no series. The library may be empty."
 
         title_lower = title.lower()
         
@@ -247,7 +274,7 @@ class Tools:
 
         return f"TV show '{title}' not found in library."
 
-    def get_upcoming_episodes(self) -> str:
+    async def get_upcoming_episodes(self, __event_emitter__=None) -> str:
         """
         Get episodes that are airing soon.
         Use this when users ask what's coming up or new episodes.
@@ -288,7 +315,7 @@ class Tools:
         except Exception as e:
             return f"Error fetching upcoming episodes: {str(e)}"
 
-    def get_recent_episodes(self, days: int = 7) -> str:
+    async def get_recent_episodes(self, days: int = 7, __event_emitter__=None) -> str:
         """
         Get episodes downloaded recently.
         Use this when users ask about new or recently added episodes.

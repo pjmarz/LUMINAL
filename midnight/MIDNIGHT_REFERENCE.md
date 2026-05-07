@@ -225,7 +225,7 @@ Completed downloads.
 
 ---
 
-### 7. midnight_overseerr_tool
+### 7. midnight_seerr_tool
 
 #### `search_to_request(query)`
 Search for content to request (not in library).

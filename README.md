@@ -14,7 +14,7 @@ LUMINAL is a self-hosted AI stack. It runs on a Proxmox VM with an NVIDIA GPU an
 
 The goal: run a real AI product entirely on self-hosted hardware. Models, auth, data, everything. No hosted inference APIs, no commercial accounts, nothing leaving the network.
 
-Midnight is a custom assistant written on top of OpenWebUI that talks to the [HELIOS](https://github.com/pjmarz/HELIOS) media library through 7 Python tools (Plex, Radarr, Sonarr, Tautulli, Bazarr, SABnzbd, Overseerr). It answers questions by calling live APIs instead of making stuff up.
+Midnight is a custom assistant written on top of OpenWebUI that talks to the [HELIOS](https://github.com/pjmarz/HELIOS) media library through 7 Python tools (Plex, Radarr, Sonarr, Tautulli, Bazarr, SABnzbd, Seerr). It answers questions by calling live APIs instead of making stuff up.
 
 ## 🧩 Architecture
 
@@ -118,7 +118,7 @@ All three share one Ollama instance and one GPU.
 | `midnight_tautulli_tool` | Watch history, current activity, most watched |
 | `midnight_bazarr_tool` | Subtitle status and history |
 | `midnight_sabnzbd_tool` | Download queue and history |
-| `midnight_overseerr_tool` | Content requests and search |
+| `midnight_seerr_tool` | Content requests and search |
 
 ### How it behaves
 

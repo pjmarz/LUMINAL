@@ -1,8 +1,11 @@
 """
-title: Midnight Overseerr Tool
-description: Media request management via Overseerr for Midnight
+title: Midnight Seerr Tool
 author: Peter Marino
-version: 1.1.0
+description: Media request management via Seerr (formerly Overseerr) for Midnight
+required_open_webui_version: 0.4.0
+requirements: requests, pydantic
+version: 2.0.0
+licence: MIT
 """
 
 import requests
@@ -11,43 +14,73 @@ from pydantic import BaseModel, Field
 
 
 class Tools:
-    """Overseerr media request management tools for Midnight."""
+    """Seerr media request management tools for Midnight (Seerr was formerly Overseerr)."""
 
     class Valves(BaseModel):
-        """Configuration for Overseerr API connection."""
-        OVERSEERR_URL: str = Field(
+        """Configuration for Seerr API connection."""
+        SEERR_URL: str = Field(
             default="http://192.168.4.46:5055",
-            description="Overseerr server URL"
+            description="Seerr server URL"
         )
-        OVERSEERR_API_KEY: str = Field(
+        SEERR_API_KEY: str = Field(
             default="",
-            description="Overseerr API key"
+            description="Seerr API key"
         )
 
     def __init__(self):
         self.valves = self.Valves()
+        self._title_cache: dict = {}  # (media_type, tmdb_id) -> title
+
+    async def _emit(self, emitter, description: str, done: bool = False) -> None:
+        """Send a status event to OpenWebUI if an emitter is wired."""
+        if emitter:
+            await emitter({
+                "type": "status",
+                "data": {"description": description, "done": done},
+            })
 
     def _get_headers(self) -> dict:
         """Get API headers."""
         return {
-            "X-Api-Key": self.valves.OVERSEERR_API_KEY,
+            "X-Api-Key": self.valves.SEERR_API_KEY,
             "Content-Type": "application/json"
         }
 
-    def _make_request(self, endpoint: str, method: str = "GET", data: dict = None) -> dict:
-        """Make API request to Overseerr."""
-        try:
-            url = f"{self.valves.OVERSEERR_URL}/api/v1{endpoint}"
-            if method == "GET":
-                response = requests.get(url, headers=self._get_headers(), timeout=30)
-            elif method == "POST":
-                response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            return {"error": str(e)}
+    def _lookup_title(self, media_type: str, tmdb_id: int) -> Optional[str]:
+        """Look up a title for a (media_type, tmdb_id) pair, caching across calls.
 
-    def search_to_request(self, query: str) -> str:
+        Returns None on lookup failure rather than raising — partial result
+        ("Unknown") is preferable to failing the whole listing.
+        """
+        key = (media_type, tmdb_id)
+        if key in self._title_cache:
+            return self._title_cache[key]
+        try:
+            if media_type == "movie":
+                details = self._make_request(f"/movie/{tmdb_id}")
+                title = details.get("title")
+            else:
+                details = self._make_request(f"/tv/{tmdb_id}")
+                title = details.get("name")
+        except Exception:
+            return None
+        if title:
+            self._title_cache[key] = title
+        return title
+
+    def _make_request(self, endpoint: str, method: str = "GET", data: dict = None) -> dict:
+        """Make API request to Seerr. Raises on transport/HTTP error."""
+        url = f"{self.valves.SEERR_URL}/api/v1{endpoint}"
+        if method == "GET":
+            response = requests.get(url, headers=self._get_headers(), timeout=30)
+        elif method == "POST":
+            response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+        response.raise_for_status()
+        return response.json()
+
+    async def search_to_request(self, query: str, __event_emitter__=None) -> str:
         """
         Search for movies or TV shows that can be requested.
         Use this when users want to request new content not in the library.
@@ -55,14 +88,16 @@ class Tools:
         :param query: Movie or TV show title to search for
         :return: List of results that can be requested
         """
-        data = self._make_request(f"/search?query={requests.utils.quote(query)}&page=1")
-        
-        if "error" in data:
-            return f"Error searching Overseerr: {data['error']}"
-        
+        await self._emit(__event_emitter__, f"Searching Seerr for '{query}'…")
+        try:
+            data = self._make_request(f"/search?query={requests.utils.quote(query)}&page=1")
+        except Exception as e:
+            await self._emit(__event_emitter__, "Seerr unreachable", done=True)
+            return f"Seerr error: {e}"
+
         results = data.get("results", [])
         if not results:
-            return f"No results found for '{query}' in Overseerr."
+            return f"No results found for '{query}' in Seerr."
         
         output = f"Search results for '{query}':\n\n"
         
@@ -94,9 +129,10 @@ class Tools:
             output += f"   ID: {tmdb_id} | Type: {media_type}\n"
         
         output += "\n*To request, use: request_movie(tmdb_id) or request_tv(tmdb_id)*"
+        await self._emit(__event_emitter__, f"Found {len(results)} result(s)", done=True)
         return output
 
-    def request_movie(self, tmdb_id: int) -> str:
+    async def request_movie(self, tmdb_id: int, __event_emitter__=None) -> str:
         """
         Request a movie to be added to the library.
         Use the TMDb ID from search results.
@@ -104,20 +140,20 @@ class Tools:
         :param tmdb_id: The Movie Database ID for the movie
         :return: Request status message
         """
-        data = self._make_request("/request", method="POST", data={
-            "mediaType": "movie",
-            "mediaId": tmdb_id
-        })
-        
-        if "error" in data:
-            return f"Error requesting movie: {data['error']}"
-        
+        try:
+            data = self._make_request("/request", method="POST", data={
+                "mediaType": "movie",
+                "mediaId": tmdb_id
+            })
+        except Exception as e:
+            return f"Seerr error requesting movie: {e}"
+
         if data.get("id"):
             return f"✅ Movie request submitted successfully! Request ID: {data['id']}"
-        
-        return f"Request submitted. Status: {data}"
 
-    def request_tv(self, tmdb_id: int, seasons: str = "all") -> str:
+        return f"Request submitted but no request ID returned. Raw response: {data}"
+
+    async def request_tv(self, tmdb_id: int, seasons: str = "all", __event_emitter__=None) -> str:
         """
         Request a TV show to be added to the library.
         Use the TMDb ID from search results.
@@ -127,76 +163,62 @@ class Tools:
         :return: Request status message
         """
         # First get show details to know available seasons
-        show_data = self._make_request(f"/tv/{tmdb_id}")
-        
-        if "error" in show_data:
-            return f"Error fetching show details: {show_data['error']}"
-        
+        try:
+            show_data = self._make_request(f"/tv/{tmdb_id}")
+        except Exception as e:
+            return f"Seerr error fetching show details: {e}"
+
         # Build seasons request
         if seasons.lower() == "all":
-            season_list = [{"seasonNumber": s.get("seasonNumber")} 
-                          for s in show_data.get("seasons", []) 
+            season_list = [{"seasonNumber": s.get("seasonNumber")}
+                          for s in show_data.get("seasons", [])
                           if s.get("seasonNumber", 0) > 0]
         else:
             try:
                 season_nums = [int(s.strip()) for s in seasons.split(",")]
                 season_list = [{"seasonNumber": n} for n in season_nums]
-            except:
+            except ValueError:
                 return "Invalid seasons format. Use 'all' or comma-separated numbers like '1,2,3'"
-        
-        data = self._make_request("/request", method="POST", data={
-            "mediaType": "tv",
-            "mediaId": tmdb_id,
-            "seasons": season_list
-        })
-        
-        if "error" in data:
-            return f"Error requesting TV show: {data['error']}"
-        
+
+        try:
+            data = self._make_request("/request", method="POST", data={
+                "mediaType": "tv",
+                "mediaId": tmdb_id,
+                "seasons": season_list
+            })
+        except Exception as e:
+            return f"Seerr error requesting TV show: {e}"
+
         if data.get("id"):
             return f"✅ TV show request submitted successfully! Request ID: {data['id']}"
-        
-        return f"Request submitted. Status: {data}"
 
-    def get_pending_requests(self) -> str:
+        return f"Request submitted but no request ID returned. Raw response: {data}"
+
+    async def get_pending_requests(self, __event_emitter__=None) -> str:
         """
         Get all pending media requests.
         Use this to see what has been requested but not yet fulfilled.
 
         :return: List of pending requests
         """
-        data = self._make_request("/request?take=20&skip=0&filter=pending")
-        
-        if "error" in data:
-            return f"Error fetching requests: {data['error']}"
-        
+        try:
+            data = self._make_request("/request?take=20&skip=0&filter=pending")
+        except Exception as e:
+            return f"Seerr error: {e}"
+
         results = data.get("results", [])
         if not results:
             return "No pending requests."
-        
+
         output = f"**Pending Requests ({len(results)}):**\n\n"
-        
+
         for req in results:
             media = req.get("media", {})
             media_type = req.get("type", "unknown")
             type_emoji = "🎬" if media_type == "movie" else "📺"
-            
-            # Get title from the correct field
-            # Overseerr stores it in media.externalServiceId or we need to fetch from tmdb
+
             tmdb_id = media.get("tmdbId")
-            
-            # Try to get title from media info first
-            title = None
-            media_info = media.get("mediaInfo") or {}
-            if not title and tmdb_id:
-                # Fetch from movie or tv endpoint
-                if media_type == "movie":
-                    details = self._make_request(f"/movie/{tmdb_id}")
-                    title = details.get("title", "Unknown")
-                else:
-                    details = self._make_request(f"/tv/{tmdb_id}")
-                    title = details.get("name", "Unknown")
-            
+            title = self._lookup_title(media_type, tmdb_id) if tmdb_id else None
             if not title:
                 title = "Unknown"
             
@@ -212,7 +234,7 @@ class Tools:
         
         return output
 
-    def get_recent_requests(self, count: int = 10) -> str:
+    async def get_recent_requests(self, count: int = 10, __event_emitter__=None) -> str:
         """
         Get recent media requests (approved, pending, or declined).
         Use this to see request history.
@@ -220,33 +242,24 @@ class Tools:
         :param count: Number of requests to fetch (default 10)
         :return: List of recent requests
         """
-        data = self._make_request(f"/request?take={count}&skip=0")
-        
-        if "error" in data:
-            return f"Error fetching requests: {data['error']}"
-        
+        try:
+            data = self._make_request(f"/request?take={count}&skip=0")
+        except Exception as e:
+            return f"Seerr error: {e}"
+
         results = data.get("results", [])
         if not results:
             return "No requests found."
-        
+
         output = f"**Recent Requests ({len(results)}):**\n\n"
-        
+
         for req in results:
             media = req.get("media", {})
             media_type = req.get("type", "unknown")
             type_emoji = "🎬" if media_type == "movie" else "📺"
-            
-            # Get title from the TMDB endpoint
+
             tmdb_id = media.get("tmdbId")
-            title = None
-            if tmdb_id:
-                if media_type == "movie":
-                    details = self._make_request(f"/movie/{tmdb_id}")
-                    title = details.get("title", "Unknown")
-                else:
-                    details = self._make_request(f"/tv/{tmdb_id}")
-                    title = details.get("name", "Unknown")
-            
+            title = self._lookup_title(media_type, tmdb_id) if tmdb_id else None
             if not title:
                 title = "Unknown"
             

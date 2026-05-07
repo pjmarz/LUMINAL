@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-07
+
+### Added
+- **Anti-hallucination error surfacing**: Tool failures now reach the model as visible error strings instead of silent empty results. Bazarr, Radarr, Sonarr, SABnzbd, Seerr, and Tautulli public methods catch and translate transport/HTTP errors. Plex actor/director search accumulates per-section errors and reports partial-success state instead of silently dropping unreachable sections. Tautulli `get_most_watched` now reports per-stat-block errors (no more vacuous "Most watched content (last 30 days):" header on backend failure).
+- **Local self-test**: `midnight/_selftest.py` validates the anti-hallucination contract by pointing every Valve at an unreachable host and asserting each public method returns a visible error string. Also covers `_fuzzy_match` and Seerr `_lookup_title` cache logic. Run with `python3 midnight/_selftest.py` (33 checks).
+- **OpenWebUI conformance for Midnight tools**:
+  - Top-level metadata blocks for all 7 tools now include `required_open_webui_version`, `requirements`, and `licence`.
+  - All 29 public methods migrated to `async def` for forward compatibility with OpenWebUI's documented Tool API.
+  - `__event_emitter__=None` parameter threaded through every public method. Status events ("Searching Plex…", "Found 12 results") wired on the highest-impact methods (search_by_actor, get_recently_added, list_movies_by_genre, list_shows_by_genre, get_most_watched, check_subtitles, get_download_queue, search_to_request).
+  - `__user__` parameter added to Tautulli `get_activity` — sessions matching the OpenWebUI user are now labeled "you".
+- **Knowledge retrieval guidance**: System prompt now explicitly instructs the model to call `query_knowledge_files` before tool selection. Required because Native function calling does NOT auto-inject attached Knowledge documents.
+- **Fuzzy show-name matching**: Plex `get_episode_details` now fuzzy-matches `show_name` against returned grandparentTitle, so typos like "BoBs Burgers" still resolve. The Plex `_fuzzy_match` is now annotated as the canonical implementation; copies in radarr/sonarr/bazarr carry sync notes.
+
+### Changed
+- **Seerr rebrand**: `midnight_overseerr.py` renamed to `midnight_seerr.py`. Valves renamed (`OVERSEERR_URL` → `SEERR_URL`, `OVERSEERR_API_KEY` → `SEERR_API_KEY`). All docs updated. Existing OpenWebUI tool installations need to re-upload as `midnight_seerr_tool` and re-enter Valve config (copy URL + API key first).
+- **Seerr request listings**: `get_pending_requests` and `get_recent_requests` now use a `_lookup_title` helper with an in-memory `_title_cache`, eliminating the N+1 detail calls per request listing (20 pending requests previously triggered ~21 HTTP calls).
+- **Midnight model parameters** (`midnight/README.md`):
+  - `keep_alive`: `5m` → `30m` (drops first-call latency from ~3s to ~50ms while gemma4:e4b stays resident).
+  - `max_tokens`: `2048` → `4096` (long movie/show lists routinely exceed 2048 tokens in markdown).
+  - Added `top_k=64`, `top_p=0.95`, `min_p=0.0` to match Google's documented Gemma optimums.
+  - `temperature` kept at `0.4` (intentional divergence from Google's `1.0` default — trades exploration for tool-selection determinism in this assistant).
+
+### Fixed
+- Bazarr `check_subtitles` and `get_missing_subtitles` no longer swallow API errors with bare `except: pass` — they now accumulate per-endpoint errors and report partial-success state.
+- SABnzbd `get_download_history` no longer drops rows on datetime-parse failure; missing dates render as "unknown date" instead.
+- Seerr `_make_request` no longer mixes `{"error": ...}` dicts into success paths; callers raise/return cleanly.
+
 ## [1.3.0] - 2026-04-17
 
 ### Added

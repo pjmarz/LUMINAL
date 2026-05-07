@@ -1,8 +1,11 @@
 """
 title: Midnight Plex Tool
-description: Unified search and library access for Plex Media Server
 author: Peter Marino
-version: 1.9.0
+description: Unified search and library access for Plex Media Server
+required_open_webui_version: 0.4.0
+requirements: requests, pydantic
+version: 2.0.0
+licence: MIT
 """
 
 import requests
@@ -27,6 +30,14 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
         self._section_cache = {}
+
+    async def _emit(self, emitter, description: str, done: bool = False) -> None:
+        """Send a status event to OpenWebUI if an emitter is wired."""
+        if emitter:
+            await emitter({
+                "type": "status",
+                "data": {"description": description, "done": done},
+            })
 
     def _get_headers(self) -> dict:
         """Get API headers."""
@@ -65,7 +76,12 @@ class Tools:
         """
         Find fuzzy matches for a query in a list of candidates.
         Uses difflib for typo tolerance.
-        
+
+        CANONICAL implementation. Other midnight tools (radarr, sonarr, bazarr)
+        copy this verbatim because OpenWebUI uploads each tool as a standalone
+        .py file and cross-file imports aren't supported. If you change the
+        scoring logic or threshold semantics here, update the copies too.
+
         :param query: Search query (potentially misspelled)
         :param candidates: List of (name, data) tuples to match against
         :param threshold: Minimum similarity ratio (0.0 to 1.0)
@@ -91,7 +107,7 @@ class Tools:
         # Sort by score descending
         return sorted(matches, key=lambda x: x[2], reverse=True)
 
-    def search_plex(self, query: str) -> str:
+    async def search_plex(self, query: str, __event_emitter__=None) -> str:
         """
         Search across all Plex libraries for movies, TV shows, or other content.
         Use this for unified search when user doesn't specify movie vs TV.
@@ -152,7 +168,7 @@ class Tools:
         except Exception as e:
             return f"Error searching Plex: {str(e)}"
 
-    def search_by_actor(self, actor_name: str) -> str:
+    async def search_by_actor(self, actor_name: str, __event_emitter__=None) -> str:
         """
         Search for movies and TV shows featuring a specific actor.
         Use this when users ask for content with a specific actor/actress.
@@ -161,6 +177,7 @@ class Tools:
         :param actor_name: Name of the actor to search for
         :return: All movies and shows featuring that actor
         """
+        await self._emit(__event_emitter__, f"Searching Plex for actor '{actor_name}'…")
         try:
             # Find the actor in Plex
             response = requests.get(
@@ -202,7 +219,8 @@ class Tools:
 
             all_movies = []
             all_shows = []
-            
+            section_errors = []
+
             # Get content from each library section
             for actor_info in actor_keys:
                 try:
@@ -220,11 +238,14 @@ class Tools:
                             all_movies.append(item)
                         elif item.get("type") == "show":
                             all_shows.append(item)
-                except:
-                    continue  # Skip failed sections silently
+                except Exception as e:
+                    section_errors.append(f"{actor_info.get('section', 'Unknown')}: {e}")
 
             total = len(all_movies) + len(all_shows)
-            
+
+            if total == 0 and section_errors:
+                return f"Plex error fetching actor results: {'; '.join(section_errors)}"
+
             if total == 0:
                 return f"No content found featuring {matched_name}."
 
@@ -232,7 +253,7 @@ class Tools:
             correction_note = ""
             if matched_name.lower() != actor_name.lower():
                 correction_note = f" *(searched for '{actor_name}')*"
-            
+
             result = f"Content featuring **{matched_name}**{correction_note} ({total} total):\n\n"
             
             if all_movies:
@@ -253,12 +274,17 @@ class Tools:
                     year = show.get("year", "N/A")
                     result += f"  • {title} ({year})\n"
 
+            if section_errors:
+                result += f"\n⚠️ Partial results — {len(section_errors)} section(s) unreachable: {'; '.join(section_errors)}"
+
             return result
 
         except Exception as e:
             return f"Error searching for actor: {str(e)}"
+        finally:
+            await self._emit(__event_emitter__, "Done", done=True)
 
-    def search_by_director(self, director_name: str) -> str:
+    async def search_by_director(self, director_name: str, __event_emitter__=None) -> str:
         """
         Search for movies and TV shows by a specific director.
         Use this when users ask for content directed by someone.
@@ -307,7 +333,8 @@ class Tools:
 
             all_movies = []
             all_shows = []
-            
+            section_errors = []
+
             # Get content from each library section
             for director_info in director_keys:
                 try:
@@ -325,11 +352,14 @@ class Tools:
                             all_movies.append(item)
                         elif item.get("type") == "show":
                             all_shows.append(item)
-                except:
-                    continue
+                except Exception as e:
+                    section_errors.append(f"{director_info.get('section', 'Unknown')}: {e}")
 
             total = len(all_movies) + len(all_shows)
-            
+
+            if total == 0 and section_errors:
+                return f"Plex error fetching director results: {'; '.join(section_errors)}"
+
             if total == 0:
                 return f"No content found directed by {matched_name}."
 
@@ -337,7 +367,7 @@ class Tools:
             correction_note = ""
             if matched_name.lower() != director_name.lower():
                 correction_note = f" *(searched for '{director_name}')*"
-            
+
             result = f"Content directed by **{matched_name}**{correction_note} ({total} total):\n\n"
             
             if all_movies:
@@ -358,12 +388,15 @@ class Tools:
                     year = show.get("year", "N/A")
                     result += f"  • {title} ({year})\n"
 
+            if section_errors:
+                result += f"\n⚠️ Partial results — {len(section_errors)} section(s) unreachable: {'; '.join(section_errors)}"
+
             return result
 
         except Exception as e:
             return f"Error searching for director: {str(e)}"
 
-    def get_cast(self, title: str, limit: int = 10) -> str:
+    async def get_cast(self, title: str, limit: int = 10, __event_emitter__=None) -> str:
         """
         Get the cast of a movie or TV show.
         Use this when users ask "who's in [title]?", "cast of [title]", or "who starred in [title]?".
@@ -449,7 +482,7 @@ class Tools:
         except Exception as e:
             return f"Error fetching cast: {str(e)}"
 
-    def get_recently_added(self, limit: int = 15, media_type: str = "all") -> str:
+    async def get_recently_added(self, limit: int = 15, media_type: str = "all", __event_emitter__=None) -> str:
         """
         Get recently added content from Plex.
         Use this when users ask about new additions or what's new.
@@ -458,6 +491,7 @@ class Tools:
         :param media_type: Filter by type - "movies", "episodes", "shows", or "all" (default "all")
         :return: Recently added movies and/or TV content
         """
+        await self._emit(__event_emitter__, f"Fetching recently added {media_type}…")
         try:
             media_type_lower = media_type.lower()
             items = []
@@ -550,8 +584,10 @@ class Tools:
 
         except Exception as e:
             return f"Error fetching recently added: {str(e)}"
+        finally:
+            await self._emit(__event_emitter__, "Done", done=True)
 
-    def get_on_deck(self) -> str:
+    async def get_on_deck(self, __event_emitter__=None) -> str:
         """
         Get the "On Deck" queue - shows/movies in progress.
         Use this when users ask what they were watching or continue watching.
@@ -595,10 +631,11 @@ class Tools:
         except Exception as e:
             return f"Error fetching on deck: {str(e)}"
 
-    def get_episode_details(self, episode_title: str, show_name: str = "") -> str:
+    async def get_episode_details(self, episode_title: str, show_name: str = "", __event_emitter__=None) -> str:
         """
         Get detailed information about a specific TV episode including synopsis.
         Use this when users ask "what's this episode about?" or want episode details.
+        Tolerant of typos in show_name via fuzzy matching against Plex results.
 
         :param episode_title: Title of the episode (e.g., "The Pirate Dinner")
         :param show_name: Optional show name to narrow search (e.g., "Landman")
@@ -610,8 +647,9 @@ class Tools:
             episode_title = episode_title.replace(""", '"').replace(""", '"')
             if show_name:
                 show_name = show_name.replace("'", "'").replace("'", "'")
-            
-            # Search for the episode in the TV section
+
+            # Search for the episode in the TV section.
+            # Plex's section search is already fuzzy server-side for the query string.
             section_id = self._get_section_id("show")
             if not section_id:
                 return "Error: Could not find a Plex TV library section."
@@ -625,15 +663,20 @@ class Tools:
             data = response.json()
 
             items = data.get("MediaContainer", {}).get("Metadata", [])
-            
+
             if not items:
                 return f"No episode found matching '{episode_title}'."
 
-            # If show_name provided, filter by it
+            # If show_name provided, fuzzy-match against grandparentTitle so typos
+            # ("BoBs Burgers", "Better Caul Saul") still find the right show.
+            corrected_show = ""
             if show_name:
-                show_lower = show_name.lower()
-                items = [i for i in items if show_lower in i.get("grandparentTitle", "").lower()]
-            
+                candidates = [(i.get("grandparentTitle", ""), i) for i in items]
+                matches = self._fuzzy_match(show_name, candidates, threshold=0.6)
+                items = [item for _, item, _ in matches]
+                if matches and matches[0][0].lower() != show_name.lower():
+                    corrected_show = matches[0][0]
+
             if not items:
                 return f"No episode '{episode_title}' found for show '{show_name}'."
 
@@ -651,12 +694,14 @@ class Tools:
             rating = ep.get("rating", None)
             
             result = f"**{show}** - S{season:02d}E{episode_num:02d}: {title}\n\n"
+            if corrected_show:
+                result += f"*(matched show '{corrected_show}', you searched for '{show_name}')*\n\n"
             result += f"📅 **Air Date:** {air_date}\n"
             result += f"⏱️ **Duration:** {duration_min} minutes\n"
             if rating:
                 result += f"⭐ **Rating:** {rating:.1f}\n"
             result += f"\n**Synopsis:**\n{summary}"
-            
+
             return result
 
         except Exception as e:

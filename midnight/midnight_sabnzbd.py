@@ -1,8 +1,11 @@
 """
 title: Midnight SABnzbd Tool
-description: Download queue and history via SABnzbd for Midnight
 author: Peter Marino
-version: 1.2.0
+description: Download queue and history via SABnzbd for Midnight
+required_open_webui_version: 0.4.0
+requirements: requests, pydantic
+version: 2.0.0
+licence: MIT
 """
 
 import requests
@@ -27,38 +30,45 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
-    def _api_call(self, mode: str, params: dict = None) -> dict:
-        """Make SABnzbd API call."""
-        try:
-            all_params = {
-                "apikey": self.valves.SABNZBD_API_KEY,
-                "mode": mode,
-                "output": "json"
-            }
-            if params:
-                all_params.update(params)
-                
-            response = requests.get(
-                f"{self.valves.SABNZBD_URL}/api",
-                params=all_params,
-                timeout=30
-            )
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            return {}
+    async def _emit(self, emitter, description: str, done: bool = False) -> None:
+        """Send a status event to OpenWebUI if an emitter is wired."""
+        if emitter:
+            await emitter({
+                "type": "status",
+                "data": {"description": description, "done": done},
+            })
 
-    def get_download_queue(self) -> str:
+    def _api_call(self, mode: str, params: dict = None) -> dict:
+        """Make SABnzbd API call. Raises on transport/HTTP error."""
+        all_params = {
+            "apikey": self.valves.SABNZBD_API_KEY,
+            "mode": mode,
+            "output": "json"
+        }
+        if params:
+            all_params.update(params)
+
+        response = requests.get(
+            f"{self.valves.SABNZBD_URL}/api",
+            params=all_params,
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()
+
+    async def get_download_queue(self, __event_emitter__=None) -> str:
         """
         Get current download queue from SABnzbd.
         Use this when users ask about pending downloads, what's downloading, or queue status.
 
         :return: Current download queue with progress
         """
-        data = self._api_call("queue")
-        
-        if not data:
-            return "Error: Could not fetch download queue from SABnzbd."
+        await self._emit(__event_emitter__, "Fetching SABnzbd queue…")
+        try:
+            data = self._api_call("queue")
+        except Exception as e:
+            await self._emit(__event_emitter__, "SABnzbd unreachable", done=True)
+            return f"SABnzbd error: {e}"
 
         queue = data.get("queue", {})
         slots = queue.get("slots", [])
@@ -93,9 +103,10 @@ class Tools:
         if len(slots) > 10:
             result += f"\n... and {len(slots) - 10} more items in queue."
 
+        await self._emit(__event_emitter__, f"{len(slots)} item(s) in queue", done=True)
         return result
 
-    def get_download_history(self, count: int = 15) -> str:
+    async def get_download_history(self, count: int = 15, __event_emitter__=None) -> str:
         """
         Get recent download history from SABnzbd.
         Use this when users ask about completed downloads or what was downloaded.
@@ -103,10 +114,10 @@ class Tools:
         :param count: Number of history items to show (default 15)
         :return: Recent download history
         """
-        data = self._api_call("history", {"limit": count})
-        
-        if not data:
-            return "Error: Could not fetch download history."
+        try:
+            data = self._api_call("history", {"limit": count})
+        except Exception as e:
+            return f"SABnzbd error: {e}"
 
         history = data.get("history", {})
         slots = history.get("slots", [])
@@ -116,18 +127,17 @@ class Tools:
 
         result = "Recent downloads:\n\n"
 
+        from datetime import datetime
         for slot in slots:
             name = slot.get("name", "Unknown")
             status = slot.get("status", "Unknown")
             size = slot.get("size", "0 MB")
             completed = slot.get("completed", 0)
-            
-            # Parse completion time
-            from datetime import datetime
+
             try:
                 completed_date = datetime.fromtimestamp(completed).strftime("%Y-%m-%d %H:%M")
-            except:
-                completed_date = "Unknown"
+            except (TypeError, ValueError, OSError):
+                completed_date = "unknown date"
             
             # Truncate long names
             display_name = name[:45] + "..." if len(name) > 45 else name
