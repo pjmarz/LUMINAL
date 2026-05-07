@@ -12,7 +12,51 @@ import requests
 from typing import Optional
 from pydantic import BaseModel, Field
 
-# {{INLINE_SHARED}}
+# === BEGIN inlined from midnight/_shared.py — DO NOT EDIT, regenerate via build_tools.py ===
+from difflib import SequenceMatcher
+
+
+def fuzzy_match(query: str, candidates: list, threshold: float = 0.6) -> list:
+    """
+    Find fuzzy matches for a query in a list of candidates. Typo-tolerant.
+
+    :param query: Search query (potentially misspelled)
+    :param candidates: List of (name, data) tuples to match against
+    :param threshold: Minimum similarity ratio (0.0 to 1.0)
+    :return: List of matching (name, data, score) tuples, sorted by score desc
+    """
+    query_lower = query.lower()
+    matches = []
+    for name, data in candidates:
+        name_lower = name.lower()
+        # Substring match in either direction scores 1.0
+        if query_lower in name_lower or name_lower in query_lower:
+            matches.append((name, data, 1.0))
+        else:
+            ratio = SequenceMatcher(None, query_lower, name_lower).ratio()
+            if ratio >= threshold:
+                matches.append((name, data, ratio))
+    return sorted(matches, key=lambda x: x[2], reverse=True)
+
+
+async def emit_status(emitter, description: str, done: bool = False) -> None:
+    """
+    Send an OpenWebUI status event if an emitter is wired.
+
+    Always pair a `done=False` open with a `done=True` close (use try/finally)
+    or the OpenWebUI shimmer animation will hang.
+
+    :param emitter: __event_emitter__ injected by OpenWebUI, or None
+    :param description: Status text shown to the user
+    :param done: True when the operation has finished (success OR failure)
+    """
+    if emitter:
+        await emitter({
+            "type": "status",
+            "data": {"description": description, "done": done},
+        })
+# === END inlined from midnight/_shared.py ===
+
 
 
 class Tools:

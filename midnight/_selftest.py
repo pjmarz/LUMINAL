@@ -4,31 +4,40 @@ Local validation for Midnight tools — anti-hallucination contract + pure funct
 
 Run: python3 midnight/_selftest.py
 
+Targets midnight/dist/ — the post-build files that get uploaded to OpenWebUI.
+Templates in midnight/midnight_*.py reference fuzzy_match/emit_status from the
+inlined `# {{INLINE_SHARED}}` block; they only resolve after build_tools.py runs.
+
 Validates:
 1. Every public Tool method returns a visible error string when its backend is
    unreachable (Valve points at http://127.0.0.1:1). No silent empties.
-2. _fuzzy_match returns expected matches for known inputs.
+2. fuzzy_match returns expected matches for known inputs.
 3. Seerr _lookup_title caches the second call.
-4. Plex get_recently_added renders dates in the container's local TZ. Catches
-   regressions where TZ propagation gets dropped (the kind of bug that makes
-   chat dates drift by a day from what the Plex UI shows).
+4. Plex get_recently_added renders dates in the container's local TZ.
+5. build_tools.py is deterministic (re-running produces byte-identical output).
 """
 
 import asyncio
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 MIDNIGHT = Path(__file__).resolve().parent
+DIST = MIDNIGHT / "dist"
 UNREACHABLE = "http://127.0.0.1:1"
 
 
 def load(file_name: str):
-    """Load a midnight_*.py module by file path (avoids package init)."""
-    path = MIDNIGHT / file_name
+    """Load a midnight_*.py module from midnight/dist/ (post-build)."""
+    path = DIST / file_name
+    if not path.exists():
+        raise SystemExit(
+            f"ERROR: {path} not found. Run `python3 midnight/build_tools.py` first."
+        )
     spec = importlib.util.spec_from_file_location(path.stem, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -187,22 +196,23 @@ def run_tz_test():
 
 def run_pure_tests():
     failures = []
-    plex = load("midnight_plex.py").Tools()
+    plex_mod = load("midnight_plex.py")
+    fuzzy_match = plex_mod.fuzzy_match  # inlined from _shared.py
 
-    # _fuzzy_match: substring match scores 1.0
-    matches = plex._fuzzy_match("matrix", [("The Matrix", "d1"), ("Unrelated", "d2")])
+    # fuzzy_match: substring match scores 1.0
+    matches = fuzzy_match("matrix", [("The Matrix", "d1"), ("Unrelated", "d2")])
     if not (len(matches) == 1 and matches[0][0] == "The Matrix" and matches[0][2] == 1.0):
-        failures.append(("_fuzzy_match substring", f"got {matches}"))
+        failures.append(("fuzzy_match substring", f"got {matches}"))
 
-    # _fuzzy_match: typo within threshold still matches
-    matches = plex._fuzzy_match("Tom Hanx", [("Tom Hanks", "x"), ("Bob", "y")], threshold=0.6)
+    # fuzzy_match: typo within threshold still matches
+    matches = fuzzy_match("Tom Hanx", [("Tom Hanks", "x"), ("Bob", "y")], threshold=0.6)
     if not (matches and matches[0][0] == "Tom Hanks"):
-        failures.append(("_fuzzy_match typo", f"got {matches}"))
+        failures.append(("fuzzy_match typo", f"got {matches}"))
 
-    # _fuzzy_match: nothing close returns empty
-    matches = plex._fuzzy_match("xyz_unique", [("Tom Hanks", "x"), ("Bob", "y")], threshold=0.6)
+    # fuzzy_match: nothing close returns empty
+    matches = fuzzy_match("xyz_unique", [("Tom Hanks", "x"), ("Bob", "y")], threshold=0.6)
     if matches:
-        failures.append(("_fuzzy_match no-match", f"unexpected: {matches}"))
+        failures.append(("fuzzy_match no-match", f"unexpected: {matches}"))
 
     # Seerr _lookup_title cache: second call for same key must skip HTTP
     seerr = load("midnight_seerr.py").Tools()
@@ -223,34 +233,64 @@ def run_pure_tests():
     return failures, 4
 
 
+def run_build_determinism_test():
+    """Verify build_tools.py is idempotent — re-running produces byte-identical output."""
+    failures = []
+    before = {p.name: p.read_bytes() for p in sorted(DIST.glob("*.py"))}
+    if not before:
+        failures.append(("build determinism", "no files in dist/ to check"))
+        return failures, 1
+
+    result = subprocess.run(
+        [sys.executable, str(MIDNIGHT / "build_tools.py")],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        failures.append(("build determinism", f"build failed: {result.stderr}"))
+        return failures, 1
+
+    after = {p.name: p.read_bytes() for p in sorted(DIST.glob("*.py"))}
+    if before != after:
+        diffs = [name for name in before if before[name] != after.get(name)]
+        failures.append(("build determinism", f"files differ after rebuild: {diffs}"))
+    return failures, 1
+
+
 def main():
     print("=" * 72)
     print("MIDNIGHT LOCAL VALIDATION")
     print("=" * 72)
 
-    print("\n[1/3] Anti-hallucination contract (Valves → http://127.0.0.1:1)")
+    print("\n[1/4] Anti-hallucination contract (Valves → http://127.0.0.1:1)")
     p, f, contract_failures = asyncio.run(run_contract_tests())
     print(f"      {p}/{p + f} methods returned visible error strings")
     for file_name, method, msg in contract_failures:
         print(f"      ✗ {file_name}::{method} — {msg}")
 
-    print("\n[2/3] Pure-function logic")
+    print("\n[2/4] Pure-function logic")
     pure_failures, pure_total = run_pure_tests()
     print(f"      {pure_total - len(pure_failures)}/{pure_total} pure tests passed")
     for name, msg in pure_failures:
         print(f"      ✗ {name} — {msg}")
 
-    print("\n[3/3] Timezone rendering (Plex addedAt under TZ=UTC vs TZ=America/New_York)")
+    print("\n[3/4] Timezone rendering (Plex addedAt under TZ=UTC vs TZ=America/New_York)")
     tz_failures, tz_total = run_tz_test()
     print(f"      {tz_total - len(tz_failures)}/{tz_total} TZ checks passed")
     for name, msg in tz_failures:
         print(f"      ✗ {name} — {msg}")
 
-    total_failed = f + len(pure_failures) + len(tz_failures)
+    print("\n[4/4] Build determinism (re-running build_tools.py produces same output)")
+    bd_failures, bd_total = run_build_determinism_test()
+    print(f"      {bd_total - len(bd_failures)}/{bd_total} determinism checks passed")
+    for name, msg in bd_failures:
+        print(f"      ✗ {name} — {msg}")
+
+    total_failed = f + len(pure_failures) + len(tz_failures) + len(bd_failures)
     print()
     print("=" * 72)
     if total_failed == 0:
-        print(f"ALL {p + pure_total + tz_total} CHECKS PASSED")
+        print(f"ALL {p + pure_total + tz_total + bd_total} CHECKS PASSED")
         sys.exit(0)
     else:
         print(f"FAILURES: {total_failed}")

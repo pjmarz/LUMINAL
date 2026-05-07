@@ -14,13 +14,25 @@ Midnight is a collection of OpenWebUI tools that let you query your HELIOS media
 | `midnight_sabnzbd.py` | SABnzbd | Download queue, history |
 | `midnight_seerr.py` | Seerr (formerly Overseerr) | **Request movies/TV**, search for new content, view requests |
 
+## Build Workflow
+
+Each tool has a **template** (`midnight/midnight_*.py`) that contains a `# {{INLINE_SHARED}}` marker. The build script inlines `midnight/_shared.py` (canonical home for `fuzzy_match` and `emit_status`) into each template and writes the result to `midnight/dist/`. **`dist/*.py` is what you upload to OpenWebUI** — the templates won't run standalone because they reference helpers that only resolve after build.
+
+```bash
+# After editing any template or _shared.py:
+python3 midnight/build_tools.py        # regenerates midnight/dist/*.py
+python3 midnight/_selftest.py          # validates dist/ files (37 checks)
+```
+
+The build is deterministic — the self-test verifies that re-running produces byte-identical output. Both templates and `dist/` are committed; PR diffs show the actual code that runs in OpenWebUI.
+
 ## Installation
 
 ### 1. Add Tools to OpenWebUI
 
-For each `.py` file:
+For each `dist/midnight_*.py` file:
 1. Go to **Workspace** → **Tools** → **+ Add Tool**
-2. Copy the entire contents of the tool file
+2. Copy the entire contents of the **dist/** file (NOT the template)
 3. Click **Save**
 
 ### 2. Configure Valves (API Keys)

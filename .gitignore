@@ -8,6 +8,7 @@ env/
 build/
 develop-eggs/
 dist/
+!midnight/dist/
 downloads/
 eggs/
 .eggs/
