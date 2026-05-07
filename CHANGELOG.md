@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bazarr `check_subtitles` and `get_missing_subtitles` no longer swallow API errors with bare `except: pass` — they now accumulate per-endpoint errors and report partial-success state.
 - SABnzbd `get_download_history` no longer drops rows on datetime-parse failure; missing dates render as "unknown date" instead.
 - Seerr `_make_request` no longer mixes `{"error": ...}` dicts into success paths; callers raise/return cleanly.
+- **OpenWebUI container TZ propagation**: `docker-compose.yml` now passes `TZ=${TZ}` to the openwebui service the same way it already does for n8n and home-assistant. Without it, the Python `datetime.fromtimestamp()` calls inside the Midnight Plex tool rendered Plex `addedAt` timestamps in UTC, causing chat dates to drift by one calendar day for items added near UTC midnight (e.g. evening EDT). Verified by side-by-side diff against the live tool output before/after the fix.
 
 ## [1.3.0] - 2026-04-17
 

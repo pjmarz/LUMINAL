@@ -70,6 +70,7 @@ services:
     volumes:
       - openwebui_storage:/app/backend/data # Persistent storage for chat history and settings
     environment:
+      - TZ=${TZ} # So Midnight tools render Plex addedAt dates in the user's local timezone
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
       - WEBUI_SECRET_KEY_FILE=/run/secrets/openwebui_secret_key # Secret key from Docker Secrets
       - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH:-true}
