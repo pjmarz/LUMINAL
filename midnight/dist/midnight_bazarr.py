@@ -4,7 +4,7 @@ author: Peter Marino
 description: Subtitle status and management via Bazarr for Midnight
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -108,6 +108,13 @@ class Tools:
             description="Bazarr API key"
         )
 
+    class UserValves(BaseModel):
+        """Per-user preferences (set in OpenWebUI Account → Tools)."""
+        PREFERRED_LANGUAGES: str = Field(
+            default="",
+            description="Comma-separated language codes (e.g. 'en,es'). When set, missing-subtitle results filter to these languages. Empty = show all languages.",
+        )
+
     def __init__(self):
         self.valves = self.Valves()
 
@@ -185,14 +192,33 @@ class Tools:
         await emit_status(__event_emitter__, f"Found {len(results)} result(s)", done=True)
         return output
 
-    async def get_missing_subtitles(self, __event_emitter__=None) -> str:
+    async def get_missing_subtitles(self, __user__: dict = None, __event_emitter__=None) -> str:
         """
         Get all content that is missing subtitles.
         Use this when users ask about missing subtitles or what needs subtitles.
+        Filters results by the user's PREFERRED_LANGUAGES UserValve when set.
 
+        :param __user__: OpenWebUI user context (auto-injected). Used to filter by language.
         :return: List of movies and shows missing subtitles
         """
+        await emit_status(__event_emitter__, "Scanning Bazarr for missing subtitles…")
+        # Per-user language filter from UserValves
+        user_valves = (__user__ or {}).get("valves") or {}
+        if hasattr(user_valves, "PREFERRED_LANGUAGES"):
+            pref_raw = user_valves.PREFERRED_LANGUAGES
+        else:
+            pref_raw = user_valves.get("PREFERRED_LANGUAGES", "") if isinstance(user_valves, dict) else ""
+        pref_langs = [c.strip().lower() for c in (pref_raw or "").split(",") if c.strip()]
+
+        def langs_match(missing_list):
+            if not pref_langs:
+                return True
+            codes = [s.get("code2", "").lower() for s in (missing_list or [])]
+            return any(c in pref_langs for c in codes)
+
         result = "Content missing subtitles:\n\n"
+        if pref_langs:
+            result = f"Content missing subtitles (filtered to {','.join(pref_langs)}):\n\n"
         count = 0
         errors = []
 
@@ -208,9 +234,10 @@ class Tools:
             errors.append(f"Movies-wanted query failed: {movies_resp}")
         else:
             movies = movies_resp.get("data", [])
-            if movies:
+            filtered_movies = [m for m in movies if langs_match(m.get("missing_subtitles", []))]
+            if filtered_movies:
                 result += "**Movies:**\n"
-                for movie in movies[:10]:
+                for movie in filtered_movies[:10]:
                     title = movie.get("title", "Unknown")
                     missing = movie.get("missing_subtitles", [])
                     langs = [s.get("code2", "??") for s in missing]
@@ -221,9 +248,10 @@ class Tools:
             errors.append(f"Episodes-wanted query failed: {episodes_resp}")
         else:
             episodes = episodes_resp.get("data", [])
-            if episodes:
+            filtered_eps = [e for e in episodes if langs_match(e.get("missing_subtitles", []))]
+            if filtered_eps:
                 result += "\n**TV Episodes:**\n"
-                for ep in episodes[:10]:
+                for ep in filtered_eps[:10]:
                     show = ep.get("seriesTitle", "Unknown")
                     season = ep.get("season", 0)
                     episode = ep.get("episode", 0)
@@ -250,6 +278,7 @@ class Tools:
         :param count: Number of recent items to show (default 15)
         :return: Recent subtitle downloads
         """
+        await emit_status(__event_emitter__, "Fetching Bazarr subtitle download history…")
         headers = self._get_headers()
         movies_resp, series_resp = await asyncio.gather(
             http_get_json(f"{self.valves.BAZARR_URL}/api/history/movies", headers=headers, params={"length": count}),

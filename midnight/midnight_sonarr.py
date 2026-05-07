@@ -4,7 +4,7 @@ author: Peter Marino
 description: Search and query TV shows from Sonarr for the Midnight media assistant
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -50,6 +50,7 @@ class Tools:
         :param query: TV show title or keyword to search for
         :return: List of matching TV shows with details
         """
+        await emit_status(__event_emitter__, f"Searching Sonarr for '{query}'…")
         try:
             series = await self._get_all_series()
         except Exception as e:
@@ -194,6 +195,7 @@ class Tools:
         :param title: Exact or partial TV show title
         :return: Detailed show information with season breakdown
         """
+        await emit_status(__event_emitter__, f"Fetching show details for '{title}'…")
         try:
             series = await self._get_all_series()
         except Exception as e:
@@ -248,6 +250,7 @@ class Tools:
 
         :return: List of upcoming episodes
         """
+        await emit_status(__event_emitter__, "Fetching Sonarr upcoming-episodes calendar…")
         try:
             from datetime import datetime, timedelta
             
@@ -287,6 +290,7 @@ class Tools:
         :param days: Number of days to look back (default 7)
         :return: List of recently downloaded episodes
         """
+        await emit_status(__event_emitter__, f"Scanning Sonarr history for last {days} days…")
         try:
             body = await http_get_json(
                 f"{self.valves.SONARR_URL}/api/v3/history",

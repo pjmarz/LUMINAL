@@ -4,7 +4,7 @@ author: Peter Marino
 description: Media request management via Seerr (formerly Overseerr) for Midnight
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -13,6 +13,20 @@ from urllib.parse import quote
 from pydantic import BaseModel, Field
 
 # {{INLINE_SHARED}}
+
+
+def _user_auto_approve(user: dict) -> bool:
+    """Read AUTO_APPROVE from a user's UserValves dict-or-Pydantic-model."""
+    if not user:
+        return False
+    valves = user.get("valves") if isinstance(user, dict) else None
+    if valves is None:
+        return False
+    if hasattr(valves, "AUTO_APPROVE"):
+        return bool(valves.AUTO_APPROVE)
+    if isinstance(valves, dict):
+        return bool(valves.get("AUTO_APPROVE", False))
+    return False
 
 
 class Tools:
@@ -27,6 +41,13 @@ class Tools:
         SEERR_API_KEY: str = Field(
             default="",
             description="Seerr API key"
+        )
+
+    class UserValves(BaseModel):
+        """Per-user preferences (set in OpenWebUI Account → Tools)."""
+        AUTO_APPROVE: bool = Field(
+            default=False,
+            description="Submit requests with isAutoApproved=true. Seerr respects this only if the user has the auto-approve permission server-side.",
         )
 
     def __init__(self):
@@ -124,19 +145,24 @@ class Tools:
         await emit_status(__event_emitter__, f"Found {len(results)} result(s)", done=True)
         return output
 
-    async def request_movie(self, tmdb_id: int, __event_emitter__=None) -> str:
+    async def request_movie(self, tmdb_id: int, __user__: dict = None, __event_emitter__=None) -> str:
         """
         Request a movie to be added to the library.
         Use the TMDb ID from search results.
+        If the user has AUTO_APPROVE=true in UserValves AND the auto-approve
+        permission server-side, the request is submitted as auto-approved.
 
         :param tmdb_id: The Movie Database ID for the movie
+        :param __user__: OpenWebUI user context (auto-injected). Used for AUTO_APPROVE.
         :return: Request status message
         """
+        await emit_status(__event_emitter__, f"Submitting movie request (TMDb #{tmdb_id})…")
+        payload = {"mediaType": "movie", "mediaId": tmdb_id}
+        if _user_auto_approve(__user__):
+            payload["isAutoApproved"] = True
+
         try:
-            data = await self._make_request("/request", method="POST", data={
-                "mediaType": "movie",
-                "mediaId": tmdb_id
-            })
+            data = await self._make_request("/request", method="POST", data=payload)
         except Exception as e:
             return f"Seerr error requesting movie: {e}"
 
@@ -145,15 +171,19 @@ class Tools:
 
         return f"Request submitted but no request ID returned. Raw response: {data}"
 
-    async def request_tv(self, tmdb_id: int, seasons: str = "all", __event_emitter__=None) -> str:
+    async def request_tv(self, tmdb_id: int, seasons: str = "all", __user__: dict = None, __event_emitter__=None) -> str:
         """
         Request a TV show to be added to the library.
         Use the TMDb ID from search results.
+        If the user has AUTO_APPROVE=true in UserValves AND the auto-approve
+        permission server-side, the request is submitted as auto-approved.
 
         :param tmdb_id: The Movie Database ID for the TV show
         :param seasons: Which seasons to request - "all" or comma-separated numbers like "1,2,3"
+        :param __user__: OpenWebUI user context (auto-injected). Used for AUTO_APPROVE.
         :return: Request status message
         """
+        await emit_status(__event_emitter__, f"Submitting TV request (TMDb #{tmdb_id})…")
         # First get show details to know available seasons
         try:
             show_data = await self._make_request(f"/tv/{tmdb_id}")
@@ -172,12 +202,12 @@ class Tools:
             except ValueError:
                 return "Invalid seasons format. Use 'all' or comma-separated numbers like '1,2,3'"
 
+        payload = {"mediaType": "tv", "mediaId": tmdb_id, "seasons": season_list}
+        if _user_auto_approve(__user__):
+            payload["isAutoApproved"] = True
+
         try:
-            data = await self._make_request("/request", method="POST", data={
-                "mediaType": "tv",
-                "mediaId": tmdb_id,
-                "seasons": season_list
-            })
+            data = await self._make_request("/request", method="POST", data=payload)
         except Exception as e:
             return f"Seerr error requesting TV show: {e}"
 
@@ -193,6 +223,7 @@ class Tools:
 
         :return: List of pending requests
         """
+        await emit_status(__event_emitter__, "Fetching pending Seerr requests…")
         try:
             data = await self._make_request("/request?take=20&skip=0&filter=pending")
         except Exception as e:
@@ -234,6 +265,7 @@ class Tools:
         :param count: Number of requests to fetch (default 10)
         :return: List of recent requests
         """
+        await emit_status(__event_emitter__, f"Fetching last {count} Seerr requests…")
         try:
             data = await self._make_request(f"/request?take={count}&skip=0")
         except Exception as e:

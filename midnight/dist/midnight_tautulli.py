@@ -4,7 +4,7 @@ author: Peter Marino
 description: Viewing analytics and activity monitoring via Tautulli
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -134,6 +134,7 @@ class Tools:
         :param __user__: OpenWebUI user context (auto-injected). Used to label "your" stream.
         :return: Current streaming activity
         """
+        await emit_status(__event_emitter__, "Fetching current Plex activity…")
         try:
             data = await self._api_call("get_activity")
         except Exception as e:
@@ -196,6 +197,7 @@ class Tools:
         :param count: Number of history items to show (default 15)
         :return: Recent watch history
         """
+        await emit_status(__event_emitter__, f"Fetching last {count} watch history entries…")
         try:
             data = await self._api_call("get_history", {"length": count})
         except Exception as e:

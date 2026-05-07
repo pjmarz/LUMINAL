@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-05-07
+
+### Added
+- **Midnight build pipeline**: `midnight/_shared.py` is the canonical home for `fuzzy_match` and `emit_status`; `midnight/build_tools.py` inlines it into each tool template via the `# {{INLINE_SHARED}}` marker, writing to `midnight/dist/`. The dist/ files are what gets uploaded to OpenWebUI; templates carry the marker. Build is deterministic — re-running produces byte-identical output (verified by self-test).
+- **Real async tools (httpx)**: All Midnight tools migrated from blocking `requests` to `httpx.AsyncClient` via `http_get_json` / `http_post_json` helpers. The async signatures from v2.0.0 now match async bodies — calls actually run concurrently inside `asyncio.gather`.
+- **Parallel API fan-out**:
+  - Plex `search_by_actor` and `search_by_director` now fetch per-section results concurrently. On a 3-section library this drops latency ~3×.
+  - Bazarr `check_subtitles`, `get_missing_subtitles`, `get_subtitle_history` parallelize their movies + series queries.
+- **UserValves**: Per-user customization now wired into:
+  - **Plex**: `DEFAULT_SECTION_FILTER` (`all` | `movies` | `shows`) — narrows `get_recently_added` when caller didn't specify.
+  - **Bazarr**: `PREFERRED_LANGUAGES` (e.g. `"en,es"`) — filters missing-subtitle results to those languages.
+  - **Seerr**: `AUTO_APPROVE` (bool) — submits requests with `isAutoApproved=true`. Seerr respects this only if the user has the auto-approve permission server-side.
+- **Full event-emitter coverage**: All 29 public methods now emit a status event on entry. The "Searching Plex…" / "Fetching SABnzbd queue…" indicators render across the entire tool surface, not just the slow paths.
+- **Golden-set evaluator**: `midnight/_goldenset.py` runs 12 reference prompts against OpenWebUI's chat completions API and scores each response on tool dispatch, non-empty, no-error, and absolute-date axes. Output: `midnight/_goldenset_results.md`.
+
+### Changed
+- **All 7 Midnight tools versioned to 2.1.0**.
+- `midnight/dist/midnight_*.py` is now the canonical upload target (was `midnight/midnight_*.py` directly). README updated with the build workflow.
+- Self-test now loads from `midnight/dist/`, mocks `http_get_json` instead of `requests.get`, and includes a build-determinism check (37 checks, <5s).
+
+### Migration notes
+- After pulling, run `python3 midnight/build_tools.py` once to regenerate `midnight/dist/`.
+- In OpenWebUI: re-upload all 7 `dist/*.py` files. UserValves panes appear automatically in **Account → Tools** for users with access.
+- The `requirements:` block now declares `httpx` instead of `requests`. OpenWebUI installs declared deps automatically on tool save.
+
 ## [1.4.0] - 2026-05-07
 
 ### Added

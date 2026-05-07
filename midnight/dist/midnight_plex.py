@@ -4,7 +4,7 @@ author: Peter Marino
 description: Unified search and library access for Plex Media Server
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -108,6 +108,13 @@ class Tools:
             description="Plex authentication token"
         )
 
+    class UserValves(BaseModel):
+        """Per-user preferences (set in OpenWebUI Account → Tools)."""
+        DEFAULT_SECTION_FILTER: str = Field(
+            default="all",
+            description="Default scope for general searches: 'all' | 'movies' | 'shows'",
+        )
+
     def __init__(self):
         self.valves = self.Valves()
         self._section_cache = {}
@@ -151,6 +158,7 @@ class Tools:
         :param query: Search term (title, etc.)
         :return: Search results from all libraries
         """
+        await emit_status(__event_emitter__, f"Searching Plex for '{query}'…")
         try:
             data = await http_get_json(
                 f"{self.valves.PLEX_URL}/hubs/search",
@@ -322,6 +330,7 @@ class Tools:
         :param director_name: Name of the director to search for
         :return: All movies and shows directed by that person
         """
+        await emit_status(__event_emitter__, f"Searching Plex for director '{director_name}'…")
         try:
             # Find the director in Plex
             data = await http_get_json(
@@ -433,6 +442,7 @@ class Tools:
         :param limit: Maximum number of cast members to return (default 10)
         :return: List of actors and their roles in the title
         """
+        await emit_status(__event_emitter__, f"Looking up cast for '{title}'…")
         try:
             # Search for the title in Plex
             data = await http_get_json(
@@ -504,15 +514,31 @@ class Tools:
         except Exception as e:
             return f"Error fetching cast: {str(e)}"
 
-    async def get_recently_added(self, limit: int = 15, media_type: str = "all", __event_emitter__=None) -> str:
+    async def get_recently_added(self, limit: int = 15, media_type: str = "all", __user__: dict = None, __event_emitter__=None) -> str:
         """
         Get recently added content from Plex.
         Use this when users ask about new additions or what's new.
+        If the user has DEFAULT_SECTION_FILTER set to "movies" or "shows" in
+        UserValves AND the caller passed the default media_type="all", the
+        user's preference is applied.
 
         :param limit: Maximum number of items to return (default 15)
         :param media_type: Filter by type - "movies", "episodes", "shows", or "all" (default "all")
+        :param __user__: OpenWebUI user context (auto-injected). Used for DEFAULT_SECTION_FILTER.
         :return: Recently added movies and/or TV content
         """
+        # Honor user preference when caller didn't narrow the filter
+        if media_type == "all":
+            user_valves = (__user__ or {}).get("valves") or {}
+            if hasattr(user_valves, "DEFAULT_SECTION_FILTER"):
+                pref = user_valves.DEFAULT_SECTION_FILTER
+            elif isinstance(user_valves, dict):
+                pref = user_valves.get("DEFAULT_SECTION_FILTER", "all")
+            else:
+                pref = "all"
+            if pref in ("movies", "shows"):
+                media_type = pref
+
         await emit_status(__event_emitter__, f"Fetching recently added {media_type}…")
         try:
             media_type_lower = media_type.lower()
@@ -607,6 +633,7 @@ class Tools:
 
         :return: List of in-progress content
         """
+        await emit_status(__event_emitter__, "Fetching Plex on-deck queue…")
         try:
             data = await http_get_json(
                 f"{self.valves.PLEX_URL}/library/onDeck",
@@ -651,6 +678,7 @@ class Tools:
         :param show_name: Optional show name to narrow search (e.g., "Landman")
         :return: Episode details including synopsis, air date, duration
         """
+        await emit_status(__event_emitter__, f"Looking up episode '{episode_title}'…")
         try:
             # Normalize curly quotes to straight quotes (common user input issue)
             episode_title = episode_title.replace("'", "'").replace("'", "'")

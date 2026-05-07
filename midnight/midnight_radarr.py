@@ -4,7 +4,7 @@ author: Peter Marino
 description: Search and query movies from Radarr for the Midnight media assistant
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -50,6 +50,7 @@ class Tools:
         :param query: Movie TITLE to search for (NOT an actor name)
         :return: List of matching movies with details
         """
+        await emit_status(__event_emitter__, f"Searching Radarr for '{query}'…")
         query_lower = query.lower().strip()
         
         # Only flag as actor search if query contains explicit actor patterns
@@ -217,6 +218,7 @@ class Tools:
         :param title: Exact or partial movie title
         :return: Detailed movie information
         """
+        await emit_status(__event_emitter__, f"Fetching details for '{title}'…")
         try:
             movies = await self._get_all_movies()
         except Exception as e:
@@ -264,8 +266,9 @@ class Tools:
         :param days: Number of days to look back (default 30)
         :return: List of recently added movies
         """
+        await emit_status(__event_emitter__, f"Scanning Radarr for movies in last {days} days…")
         from datetime import datetime, timedelta
-        
+
         try:
             movies = await self._get_all_movies()
         except Exception as e:

@@ -4,7 +4,7 @@ author: Peter Marino
 description: Download queue and history via SABnzbd for Midnight
 required_open_webui_version: 0.4.0
 requirements: httpx, pydantic
-version: 2.0.0
+version: 2.1.0
 licence: MIT
 """
 
@@ -183,6 +183,7 @@ class Tools:
         :param count: Number of history items to show (default 15)
         :return: Recent download history
         """
+        await emit_status(__event_emitter__, "Fetching SABnzbd download history…")
         try:
             data = await self._api_call("history", {"limit": count})
         except Exception as e:
