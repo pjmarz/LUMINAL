@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-05-07
+
+### Fixed
+- **Knowledge collection was poisoning Midnight responses.** Live golden-set runs revealed gemma4:e4b was citing example values (literally the "Premium Rush — Dec 13, 2025" line from `MIDNIGHT_REFERENCE.md`) as if they were live library data, instead of calling tools. Even after unbinding the doc from the model's `meta.knowledge`, OpenWebUI's RAG layer continued auto-injecting chunks from the underlying collection. Resolution: deleted the "Midnight Docs" Knowledge collection via `DELETE /api/v1/knowledge/<id>/delete`. Goldenset jumped from 27/38 → 36/38 on identical prompts. The reference doc still lives on disk at [midnight/MIDNIGHT_REFERENCE.md](midnight/MIDNIGHT_REFERENCE.md) for human readers but is no longer fed to the model.
+- **`MIDNIGHT_REFERENCE.md` example data sanitized.** Concrete title/date placeholders ("Premium Rush 2012 — Dec 13, 2025", "John Cusack as Jackson Curtis") replaced with `<MOVIE_TITLE>` / `<DATE>` / `<ACTOR_NAME>` shape markers. Header now explicitly warns: "Any concrete value below is a synthetic placeholder. NEVER cite a value from this document as if it came from the user's library."
+- **`_goldenset.py` capture gap.** gemma4 in tool-use mode sometimes emits all output via `delta.reasoning_content` instead of `delta.content`. The streaming aggregator now captures both, so reasoning-only responses no longer scored as `nonempty=False`.
+
+### Changed
+- **System prompt cleanup**: removed the now-dead "Knowledge retrieval (Native function calling). Call `query_knowledge_files` to retrieve from MIDNIGHT_REFERENCE.md…" paragraph. With the Knowledge collection deleted, that instruction was both useless and risked re-introducing the poisoning behavior if Knowledge was ever re-bound. Source-of-truth at [midnight/README.md](midnight/README.md) now matches what's deployed in OpenWebUI.
+- **OpenWebUI model params bumped to v2.1.0 spec via API**: `keep_alive` 5m → 30m, `max_tokens` 2048 → 4096, added `top_k=64`, `top_p=0.95`, `min_p=0.0`. Previously these were documented in the README but not actually applied to the running model.
+
+### Validation
+- **Golden set baseline established at 36/38 axes (95%)** across three sequential runs (35, 36, 35). The two persistent failures are both `get_recently_added` queries (#4 "What's new?" and #11 "When was Premium Rush added?") where gemma4:e4b emits a planning trace via `reasoning_content` but never invokes the tool. This is intermittent model behavior, not a Midnight defect — the other 10 prompts execute reliably. Result snapshot committed at [midnight/_goldenset_results.md](midnight/_goldenset_results.md).
+
 ## [1.5.0] - 2026-05-07
 
 ### Added

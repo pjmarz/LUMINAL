@@ -1,6 +1,15 @@
 # Midnight Tool Reference Guide
 
-> **IMPORTANT**: This document describes the ACTUAL data returned by Midnight tools. When answering user questions, ONLY use information from tool outputs—never guess or assume.
+> **🚨 CRITICAL — READ FIRST**
+>
+> This document describes the **shape** of tool responses. It contains zero
+> live data. Any concrete value below (titles, dates, names) is a synthetic
+> placeholder for illustration only. **NEVER cite a value from this document
+> as if it came from the user's library.** Always invoke the actual tool to
+> retrieve real data.
+>
+> If you are reading this to answer a user's question about their library,
+> stop and call the tool instead. This document is for tool selection only.
 
 ---
 
@@ -25,10 +34,10 @@ Returns recently added content **with dates**.
 - Show name, Season, Episode number (for episodes)
 - **Added date** (e.g., "Dec 14, 2025")
 
-**Example output:**
+**Output shape (synthetic placeholders, NOT real data):**
 ```
-🎬 **Premium Rush** (2012) — added Dec 13, 2025
-📺 **Landman** S02E05 - The Pirate Dinner — added Dec 14, 2025
+🎬 **<MOVIE_TITLE>** (<YEAR>) — added <MMM DD, YYYY>
+📺 **<SHOW_TITLE>** S<NN>E<NN> - <EPISODE_TITLE> — added <MMM DD, YYYY>
 ```
 
 > ⚠️ If user asks "when was X added?", call this tool and find the `added` date in the output.
@@ -67,13 +76,12 @@ Get the cast of a movie or TV show.
 - Actor name
 - Character/role name
 
-**Example output:**
+**Output shape (synthetic placeholders, NOT real data):**
 ```
-🎬 **Cast of "2012" (2009):**
+🎬 **Cast of "<TITLE>" (<YEAR>):**
 
-1. **John Cusack** as Jackson Curtis
-2. **Chiwetel Ejiofor** as Adrian Helmsley
-3. **Amanda Peet** as Kate Curtis
+1. **<ACTOR_NAME>** as <CHARACTER_NAME>
+2. **<ACTOR_NAME>** as <CHARACTER_NAME>
 ...
 ```
 

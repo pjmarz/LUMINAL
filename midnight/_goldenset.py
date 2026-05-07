@@ -54,6 +54,48 @@ PROMPTS = [
     ("Tell me about the show PLUR1BUS", "get_show_details", ["tool", "nonempty", "no_error"]),
 ]
 
+# OpenWebUI exposes tool calls at the tool-class granularity (midnight_X_tool)
+# rather than the method granularity (get_cast). Map method → tool class so the
+# tool axis can match either form.
+TOOL_CLASS_FOR_METHOD = {
+    # Plex
+    "search_plex": "midnight_plex_tool",
+    "search_by_actor": "midnight_plex_tool",
+    "search_by_director": "midnight_plex_tool",
+    "get_cast": "midnight_plex_tool",
+    "get_recently_added": "midnight_plex_tool",
+    "get_on_deck": "midnight_plex_tool",
+    "get_episode_details": "midnight_plex_tool",
+    # Radarr
+    "search_movies_by_title": "midnight_radarr_tool",
+    "list_movies_by_genre": "midnight_radarr_tool",
+    "get_movie_details": "midnight_radarr_tool",
+    "get_recent_movies": "midnight_radarr_tool",
+    # Sonarr
+    "search_tv_shows": "midnight_sonarr_tool",
+    "list_shows_by_genre": "midnight_sonarr_tool",
+    "get_show_details": "midnight_sonarr_tool",
+    "get_upcoming_episodes": "midnight_sonarr_tool",
+    "get_recent_episodes": "midnight_sonarr_tool",
+    # Tautulli
+    "get_activity": "midnight_tautulli_tool",
+    "get_watch_history": "midnight_tautulli_tool",
+    "get_most_watched": "midnight_tautulli_tool",
+    # Bazarr
+    "check_subtitles": "midnight_bazarr_tool",
+    "get_missing_subtitles": "midnight_bazarr_tool",
+    "get_subtitle_history": "midnight_bazarr_tool",
+    # SABnzbd
+    "get_download_queue": "midnight_sabnzbd_tool",
+    "get_download_history": "midnight_sabnzbd_tool",
+    # Seerr
+    "search_to_request": "midnight_seerr_tool",
+    "request_movie": "midnight_seerr_tool",
+    "request_tv": "midnight_seerr_tool",
+    "get_pending_requests": "midnight_seerr_tool",
+    "get_recent_requests": "midnight_seerr_tool",
+}
+
 # Phrases that indicate the model recognized a service-error string from the tool
 ERROR_MARKERS = (
     "error:", "error fetching", "unreachable", "could not connect",
@@ -72,9 +114,17 @@ def score_response(prompt: str, expected_tool: str, axes: list,
     scores = {}
     if "tool" in axes:
         called = ", ".join(tool_calls) if tool_calls else "<none>"
+        # Match either the method name (get_cast) or its tool-class
+        # (midnight_plex_tool). OpenWebUI exposes the tool-class form.
+        expected_class = TOOL_CLASS_FOR_METHOD.get(expected_tool, "")
+        ok = any(
+            (expected_tool and expected_tool in tc) or
+            (expected_class and expected_class in tc)
+            for tc in tool_calls
+        )
         scores["tool"] = (
-            any(expected_tool in tc for tc in tool_calls),
-            f"expected '{expected_tool}', called: {called}",
+            ok,
+            f"expected '{expected_tool}' (or '{expected_class}'), called: {called}",
         )
     if "nonempty" in axes:
         text = (content or "").strip()
@@ -95,33 +145,79 @@ def score_response(prompt: str, expected_tool: str, axes: list,
 
 def call_openwebui(base_url: str, api_key: str, model: str, prompt: str,
                    timeout: float) -> tuple[list, str, dict]:
-    """Send a chat completion to OpenWebUI; return (tool_calls, content, raw)."""
+    """Stream a chat completion from OpenWebUI; return (tool_calls, content, raw).
+
+    Streaming is required because OpenWebUI's agentic flow with stream=False
+    often returns the model's initial tool-call message (empty content) rather
+    than the final synthesized text. Streaming aggregates all delta.content
+    chunks plus tool_calls + sources fields into a coherent picture.
+    """
     url = f"{base_url.rstrip('/')}/api/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
+        "stream": True,
     }
-    with httpx.Client(timeout=timeout) as client:
-        response = client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
 
-    choice = (data.get("choices") or [{}])[0]
-    msg = choice.get("message", {})
-    content = msg.get("content", "") or ""
-    # Tool calls may appear in different shapes depending on OpenWebUI version
-    tool_calls = []
-    for tc in msg.get("tool_calls") or []:
-        fn = (tc.get("function") or {}).get("name", "")
-        if fn:
-            tool_calls.append(fn)
-    # Some OpenWebUI deployments embed tool source pills in the content; scan as fallback
+    content_parts: list[str] = []
+    tool_calls: list[str] = []
+    raw_chunks: list[dict] = []
+
+    def add_tool(name: str) -> None:
+        if name and name not in tool_calls:
+            tool_calls.append(name)
+
+    with httpx.Client(timeout=timeout) as client:
+        with client.stream("POST", url, headers=headers, json=payload) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if not line or not line.startswith("data: "):
+                    continue
+                data = line[len("data: "):]
+                if data.strip() == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                raw_chunks.append(chunk)
+
+                # Accumulate delta.content + delta.tool_calls. Some models
+                # emit tokens via delta.reasoning_content (Ollama/gemma4 in
+                # tool-use mode); capture both so we don't blackhole the answer.
+                for choice in chunk.get("choices") or []:
+                    delta = choice.get("delta") or {}
+                    if delta.get("content"):
+                        content_parts.append(delta["content"])
+                    if delta.get("reasoning_content"):
+                        content_parts.append(delta["reasoning_content"])
+                    for tc in delta.get("tool_calls") or []:
+                        fn = (tc.get("function") or {}).get("name", "")
+                        add_tool(fn)
+                    # Some OpenWebUI builds emit a finished message field
+                    msg = choice.get("message") or {}
+                    if msg.get("content"):
+                        content_parts.append(msg["content"])
+                    if msg.get("reasoning_content"):
+                        content_parts.append(msg["reasoning_content"])
+                    for tc in msg.get("tool_calls") or []:
+                        fn = (tc.get("function") or {}).get("name", "")
+                        add_tool(fn)
+
+                # OpenWebUI-specific top-level fields with tool attribution
+                for source in chunk.get("sources") or []:
+                    for key in ("source", "name"):
+                        candidate = (source.get(key) or {}) if isinstance(source.get(key), dict) else {}
+                        for nm in (candidate.get("name"), source.get("name")):
+                            if nm and "midnight" in nm:
+                                add_tool(nm)
+
+    content = "".join(content_parts)
+    # Fallback: scan combined content for citation pills like "midnight_plex_tool"
     for hit in re.findall(r"midnight_\w+", content):
-        if hit not in tool_calls:
-            tool_calls.append(hit)
-    return tool_calls, content, data
+        add_tool(hit)
+    return tool_calls, content, {"chunks": len(raw_chunks)}
 
 
 def main() -> int:
@@ -198,6 +294,18 @@ def main() -> int:
         for axis, msg in fails.items():
             lines.append(f"- **{axis}**: {msg}")
         lines.append("")
+        # Include response content so we can manually verify whether the model
+        # actually called a tool or hallucinated from training data
+        preview = (row["content"] or "").strip()
+        if preview:
+            lines.append("<details><summary>Response content</summary>")
+            lines.append("")
+            lines.append("```")
+            lines.append(preview[:2000] + ("\n[…truncated]" if len(preview) > 2000 else ""))
+            lines.append("```")
+            lines.append("")
+            lines.append("</details>")
+            lines.append("")
     out_path.write_text("\n".join(lines))
     print(f"\nReport written to {out_path}")
 
