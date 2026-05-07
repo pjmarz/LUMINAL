@@ -3,12 +3,11 @@ title: Midnight SABnzbd Tool
 author: Peter Marino
 description: Download queue and history via SABnzbd for Midnight
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -32,7 +31,7 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
-    def _api_call(self, mode: str, params: dict = None) -> dict:
+    async def _api_call(self, mode: str, params: dict = None) -> dict:
         """Make SABnzbd API call. Raises on transport/HTTP error."""
         all_params = {
             "apikey": self.valves.SABNZBD_API_KEY,
@@ -42,13 +41,10 @@ class Tools:
         if params:
             all_params.update(params)
 
-        response = requests.get(
+        return await http_get_json(
             f"{self.valves.SABNZBD_URL}/api",
             params=all_params,
-            timeout=30
         )
-        response.raise_for_status()
-        return response.json()
 
     async def get_download_queue(self, __event_emitter__=None) -> str:
         """
@@ -59,7 +55,7 @@ class Tools:
         """
         await emit_status(__event_emitter__, "Fetching SABnzbd queue…")
         try:
-            data = self._api_call("queue")
+            data = await self._api_call("queue")
         except Exception as e:
             await emit_status(__event_emitter__, "SABnzbd unreachable", done=True)
             return f"SABnzbd error: {e}"
@@ -109,7 +105,7 @@ class Tools:
         :return: Recent download history
         """
         try:
-            data = self._api_call("history", {"limit": count})
+            data = await self._api_call("history", {"limit": count})
         except Exception as e:
             return f"SABnzbd error: {e}"
 

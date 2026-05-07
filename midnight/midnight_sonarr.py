@@ -3,12 +3,11 @@ title: Midnight Sonarr Tool
 author: Peter Marino
 description: Search and query TV shows from Sonarr for the Midnight media assistant
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -36,15 +35,12 @@ class Tools:
         """Get API headers."""
         return {"X-Api-Key": self.valves.SONARR_API_KEY}
 
-    def _get_all_series(self) -> list:
+    async def _get_all_series(self) -> list:
         """Fetch all TV series from Sonarr. Raises on transport/HTTP error."""
-        response = requests.get(
+        return await http_get_json(
             f"{self.valves.SONARR_URL}/api/v3/series",
             headers=self._get_headers(),
-            timeout=30
         )
-        response.raise_for_status()
-        return response.json()
 
     async def search_tv_shows(self, query: str, __event_emitter__=None) -> str:
         """
@@ -55,7 +51,7 @@ class Tools:
         :return: List of matching TV shows with details
         """
         try:
-            series = self._get_all_series()
+            series = await self._get_all_series()
         except Exception as e:
             return f"Sonarr error: {e}"
 
@@ -135,7 +131,7 @@ class Tools:
         }
         
         try:
-            series = self._get_all_series()
+            series = await self._get_all_series()
         except Exception as e:
             return f"Sonarr error: {e}"
 
@@ -199,7 +195,7 @@ class Tools:
         :return: Detailed show information with season breakdown
         """
         try:
-            series = self._get_all_series()
+            series = await self._get_all_series()
         except Exception as e:
             return f"Sonarr error: {e}"
 
@@ -258,14 +254,11 @@ class Tools:
             start = datetime.now().strftime("%Y-%m-%d")
             end = (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
             
-            response = requests.get(
+            episodes = await http_get_json(
                 f"{self.valves.SONARR_URL}/api/v3/calendar",
                 headers=self._get_headers(),
                 params={"start": start, "end": end, "includeSeries": "true"},
-                timeout=30
             )
-            response.raise_for_status()
-            episodes = response.json()
 
             if not episodes:
                 return "No upcoming episodes in the next 14 days."
@@ -295,14 +288,12 @@ class Tools:
         :return: List of recently downloaded episodes
         """
         try:
-            response = requests.get(
+            body = await http_get_json(
                 f"{self.valves.SONARR_URL}/api/v3/history",
                 headers=self._get_headers(),
                 params={"pageSize": 30, "eventType": 3},  # eventType 3 = downloaded
-                timeout=30
             )
-            response.raise_for_status()
-            history = response.json().get("records", [])
+            history = body.get("records", [])
 
             if not history:
                 return "No episodes downloaded recently."

@@ -3,12 +3,11 @@ title: Midnight Radarr Tool
 author: Peter Marino
 description: Search and query movies from Radarr for the Midnight media assistant
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -36,15 +35,12 @@ class Tools:
         """Get API headers."""
         return {"X-Api-Key": self.valves.RADARR_API_KEY}
 
-    def _get_all_movies(self) -> list:
+    async def _get_all_movies(self) -> list:
         """Fetch all movies from Radarr. Raises on transport/HTTP error."""
-        response = requests.get(
+        return await http_get_json(
             f"{self.valves.RADARR_URL}/api/v3/movie",
             headers=self._get_headers(),
-            timeout=30
         )
-        response.raise_for_status()
-        return response.json()
 
     async def search_movies_by_title(self, query: str, __event_emitter__=None) -> str:
         """
@@ -71,7 +67,7 @@ class Tools:
             return f"For actor searches, please use the Plex tool's search_by_actor function to find movies with '{actor_name}'"
         
         try:
-            movies = self._get_all_movies()
+            movies = await self._get_all_movies()
         except Exception as e:
             return f"Radarr error: {e}"
 
@@ -156,7 +152,7 @@ class Tools:
         }
         
         try:
-            movies = self._get_all_movies()
+            movies = await self._get_all_movies()
         except Exception as e:
             return f"Radarr error: {e}"
 
@@ -222,7 +218,7 @@ class Tools:
         :return: Detailed movie information
         """
         try:
-            movies = self._get_all_movies()
+            movies = await self._get_all_movies()
         except Exception as e:
             return f"Radarr error: {e}"
 
@@ -271,7 +267,7 @@ class Tools:
         from datetime import datetime, timedelta
         
         try:
-            movies = self._get_all_movies()
+            movies = await self._get_all_movies()
         except Exception as e:
             return f"Radarr error: {e}"
 

@@ -146,31 +146,24 @@ def run_tz_test():
         }
     }
 
-    class FakeResponse:
-        def raise_for_status(self):
-            pass
-
-        def json(self):
-            return fake_response
-
-    def fake_get(*_args, **_kwargs):
-        return FakeResponse()
+    async def fake_http_get_json(*_args, **_kwargs):
+        return fake_response
 
     original_tz = os.environ.get("TZ")
 
     def render_under_tz(tz: str) -> str:
         os.environ["TZ"] = tz
         time.tzset()
-        # Patch the module's `requests` reference so our fake intercepts the call
-        original_requests_get = plex_mod.requests.get
-        plex_mod.requests.get = fake_get
+        # Patch the module's http_get_json reference so our fake intercepts the call
+        original_fn = plex_mod.http_get_json
+        plex_mod.http_get_json = fake_http_get_json
         try:
             tools = plex_mod.Tools()
             tools.valves.PLEX_URL = "http://example.invalid"
             tools.valves.PLEX_TOKEN = "x"
             return asyncio.run(tools.get_recently_added(limit=1, media_type="all"))
         finally:
-            plex_mod.requests.get = original_requests_get
+            plex_mod.http_get_json = original_fn
 
     try:
         utc_output = render_under_tz("UTC")
@@ -218,13 +211,13 @@ def run_pure_tests():
     seerr = load("midnight_seerr.py").Tools()
     call_count = {"n": 0}
 
-    def fake(_endpoint, *_a, **_k):
+    async def fake(_endpoint, *_a, **_k):
         call_count["n"] += 1
         return {"title": "Cached Movie", "name": "Cached Show"}
 
     seerr._make_request = fake
-    t1 = seerr._lookup_title("movie", 42)
-    t2 = seerr._lookup_title("movie", 42)
+    t1 = asyncio.run(seerr._lookup_title("movie", 42))
+    t2 = asyncio.run(seerr._lookup_title("movie", 42))
     if t1 != "Cached Movie" or t2 != "Cached Movie":
         failures.append(("_lookup_title result", f"got {t1!r}, {t2!r}"))
     if call_count["n"] != 1:

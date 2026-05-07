@@ -3,17 +3,52 @@ title: Midnight Plex Tool
 author: Peter Marino
 description: Unified search and library access for Plex Media Server
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
+import asyncio
 from typing import Optional
 from pydantic import BaseModel, Field
 
 # === BEGIN inlined from midnight/_shared.py — DO NOT EDIT, regenerate via build_tools.py ===
 from difflib import SequenceMatcher
+
+import httpx
+
+
+async def http_get_json(
+    url: str,
+    *,
+    headers: dict = None,
+    params: dict = None,
+    timeout: float = 30.0,
+) -> dict:
+    """Async GET that returns parsed JSON. Raises on transport/HTTP error.
+
+    Per-call AsyncClient is the simple choice — slight overhead vs a
+    long-lived client, but no lifecycle management. For methods that fan out
+    to multiple endpoints, dispatch with asyncio.gather() to parallelize.
+    """
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
+
+
+async def http_post_json(
+    url: str,
+    *,
+    headers: dict = None,
+    json: dict = None,
+    timeout: float = 30.0,
+) -> dict:
+    """Async POST with JSON body. Returns parsed JSON. Raises on error."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers, json=json)
+        response.raise_for_status()
+        return response.json()
 
 
 def fuzzy_match(query: str, candidates: list, threshold: float = 0.6) -> list:
@@ -84,19 +119,16 @@ class Tools:
             "Accept": "application/json"
         }
 
-    def _get_section_id(self, section_type: str) -> Optional[str]:
+    async def _get_section_id(self, section_type: str) -> Optional[str]:
         """Get the Plex library section ID for a given type (movie/show)."""
         if section_type in self._section_cache:
             return self._section_cache[section_type]
 
         try:
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/library/sections",
                 headers=self._get_headers(),
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
             sections = data.get("MediaContainer", {}).get("Directory", [])
 
             for section in sections:
@@ -120,14 +152,11 @@ class Tools:
         :return: Search results from all libraries
         """
         try:
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/hubs/search",
                 headers=self._get_headers(),
                 params={"query": query, "limit": 50},
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             hubs = data.get("MediaContainer", {}).get("Hub", [])
             
@@ -183,27 +212,24 @@ class Tools:
         await emit_status(__event_emitter__, f"Searching Plex for actor '{actor_name}'…")
         try:
             # Find the actor in Plex
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/hubs/search",
                 headers=self._get_headers(),
                 params={"query": actor_name, "limit": 10},
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             # Find actor hub - actors are returned in "Directory" not "Metadata"
             actor_keys = []
             hubs = data.get("MediaContainer", {}).get("Hub", [])
-            
+
             for hub in hubs:
                 if hub.get("type") == "actor":
                     items = hub.get("Directory", [])
-                    
+
                     # Build candidates for fuzzy matching
                     candidates = [(item.get("tag", ""), item) for item in items]
                     matches = fuzzy_match(actor_name, candidates, threshold=0.65)
-                    
+
                     for name, item, score in matches:
                         actor_keys.append({
                             "key": item.get("key"),
@@ -215,7 +241,7 @@ class Tools:
 
             if not actor_keys:
                 return f"Actor '{actor_name}' not found in Plex library. Try checking the spelling."
-            
+
             # Use the best matching actor
             best_match = actor_keys[0]
             matched_name = best_match.get("name", actor_name)
@@ -224,25 +250,26 @@ class Tools:
             all_shows = []
             section_errors = []
 
-            # Get content from each library section
-            for actor_info in actor_keys:
-                try:
-                    response = requests.get(
-                        f"{self.valves.PLEX_URL}{actor_info['key']}",
-                        headers=self._get_headers(),
-                        timeout=30
-                    )
-                    response.raise_for_status()
-                    data = response.json()
+            # Fan out per-section fetches concurrently
+            headers = self._get_headers()
+            section_responses = await asyncio.gather(
+                *[
+                    http_get_json(f"{self.valves.PLEX_URL}{info['key']}", headers=headers)
+                    for info in actor_keys
+                ],
+                return_exceptions=True,
+            )
 
-                    items = data.get("MediaContainer", {}).get("Metadata", [])
-                    for item in items:
-                        if item.get("type") == "movie":
-                            all_movies.append(item)
-                        elif item.get("type") == "show":
-                            all_shows.append(item)
-                except Exception as e:
-                    section_errors.append(f"{actor_info.get('section', 'Unknown')}: {e}")
+            for actor_info, resp in zip(actor_keys, section_responses):
+                if isinstance(resp, Exception):
+                    section_errors.append(f"{actor_info.get('section', 'Unknown')}: {resp}")
+                    continue
+                items = resp.get("MediaContainer", {}).get("Metadata", [])
+                for item in items:
+                    if item.get("type") == "movie":
+                        all_movies.append(item)
+                    elif item.get("type") == "show":
+                        all_shows.append(item)
 
             total = len(all_movies) + len(all_shows)
 
@@ -297,27 +324,24 @@ class Tools:
         """
         try:
             # Find the director in Plex
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/hubs/search",
                 headers=self._get_headers(),
                 params={"query": director_name, "limit": 10},
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             # Find director hub
             director_keys = []
             hubs = data.get("MediaContainer", {}).get("Hub", [])
-            
+
             for hub in hubs:
                 if hub.get("type") == "director":
                     items = hub.get("Directory", [])
-                    
+
                     # Build candidates for fuzzy matching
                     candidates = [(item.get("tag", ""), item) for item in items]
                     matches = fuzzy_match(director_name, candidates, threshold=0.65)
-                    
+
                     for name, item, score in matches:
                         director_keys.append({
                             "key": item.get("key"),
@@ -329,7 +353,7 @@ class Tools:
 
             if not director_keys:
                 return f"Director '{director_name}' not found in Plex library. Try checking the spelling."
-            
+
             # Use the best matching director
             best_match = director_keys[0]
             matched_name = best_match.get("name", director_name)
@@ -338,25 +362,26 @@ class Tools:
             all_shows = []
             section_errors = []
 
-            # Get content from each library section
-            for director_info in director_keys:
-                try:
-                    response = requests.get(
-                        f"{self.valves.PLEX_URL}{director_info['key']}",
-                        headers=self._get_headers(),
-                        timeout=30
-                    )
-                    response.raise_for_status()
-                    data = response.json()
+            # Fan out per-section fetches concurrently
+            headers = self._get_headers()
+            section_responses = await asyncio.gather(
+                *[
+                    http_get_json(f"{self.valves.PLEX_URL}{info['key']}", headers=headers)
+                    for info in director_keys
+                ],
+                return_exceptions=True,
+            )
 
-                    items = data.get("MediaContainer", {}).get("Metadata", [])
-                    for item in items:
-                        if item.get("type") == "movie":
-                            all_movies.append(item)
-                        elif item.get("type") == "show":
-                            all_shows.append(item)
-                except Exception as e:
-                    section_errors.append(f"{director_info.get('section', 'Unknown')}: {e}")
+            for director_info, resp in zip(director_keys, section_responses):
+                if isinstance(resp, Exception):
+                    section_errors.append(f"{director_info.get('section', 'Unknown')}: {resp}")
+                    continue
+                items = resp.get("MediaContainer", {}).get("Metadata", [])
+                for item in items:
+                    if item.get("type") == "movie":
+                        all_movies.append(item)
+                    elif item.get("type") == "show":
+                        all_shows.append(item)
 
             total = len(all_movies) + len(all_shows)
 
@@ -410,14 +435,11 @@ class Tools:
         """
         try:
             # Search for the title in Plex
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/hubs/search",
                 headers=self._get_headers(),
                 params={"query": title, "limit": 10},
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             hubs = data.get("MediaContainer", {}).get("Hub", [])
             
@@ -447,14 +469,11 @@ class Tools:
             if not rating_key:
                 return f"Found '{best_match.get('title')}' but couldn't retrieve cast information."
             
-            # Fetch full metadata (XML endpoint gives us Role data)
-            metadata_response = requests.get(
+            # Fetch full metadata (gives us Role data)
+            metadata = await http_get_json(
                 f"{self.valves.PLEX_URL}/library/metadata/{rating_key}",
                 headers={"X-Plex-Token": self.valves.PLEX_TOKEN, "Accept": "application/json"},
-                timeout=30
             )
-            metadata_response.raise_for_status()
-            metadata = metadata_response.json()
             
             item_data = metadata.get("MediaContainer", {}).get("Metadata", [])
             if not item_data:
@@ -502,45 +521,36 @@ class Tools:
             # For episodes specifically, query the TV section with type=4 (episode)
             # The generic /library/recentlyAdded only returns seasons, not individual episodes
             if media_type_lower == "episodes":
-                section_id = self._get_section_id("show")
+                section_id = await self._get_section_id("show")
                 if not section_id:
                     return "Error: Could not find a Plex TV library section for episodes."
-                response = requests.get(
+                data = await http_get_json(
                     f"{self.valves.PLEX_URL}/library/sections/{section_id}/recentlyAdded",
                     headers=self._get_headers(),
                     params={"type": 4, "X-Plex-Container-Size": limit},
-                    timeout=30
                 )
-                response.raise_for_status()
-                data = response.json()
                 items = data.get("MediaContainer", {}).get("Metadata", [])
-                
+
             # For movies specifically, query the Movies section
             elif media_type_lower == "movies":
-                section_id = self._get_section_id("movie")
+                section_id = await self._get_section_id("movie")
                 if not section_id:
                     return "Error: Could not find a Plex movie library section."
-                response = requests.get(
+                data = await http_get_json(
                     f"{self.valves.PLEX_URL}/library/sections/{section_id}/recentlyAdded",
                     headers=self._get_headers(),
                     params={"X-Plex-Container-Size": limit},
-                    timeout=30
                 )
-                response.raise_for_status()
-                data = response.json()
                 items = data.get("MediaContainer", {}).get("Metadata", [])
-                
+
             # For shows/tv/series or "all", use the generic endpoint
             else:
                 fetch_limit = limit * 2 if media_type_lower in ("shows", "tv", "series") else limit
-                response = requests.get(
+                data = await http_get_json(
                     f"{self.valves.PLEX_URL}/library/recentlyAdded",
                     headers=self._get_headers(),
                     params={"X-Plex-Container-Start": 0, "X-Plex-Container-Size": fetch_limit},
-                    timeout=30
                 )
-                response.raise_for_status()
-                data = response.json()
                 items = data.get("MediaContainer", {}).get("Metadata", [])
                 
                 # Filter for TV content if requested
@@ -598,16 +608,13 @@ class Tools:
         :return: List of in-progress content
         """
         try:
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/library/onDeck",
                 headers=self._get_headers(),
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             items = data.get("MediaContainer", {}).get("Metadata", [])
-            
+
             if not items:
                 return "Nothing currently on deck (no in-progress content)."
 
@@ -653,17 +660,14 @@ class Tools:
 
             # Search for the episode in the TV section.
             # Plex's section search is already fuzzy server-side for the query string.
-            section_id = self._get_section_id("show")
+            section_id = await self._get_section_id("show")
             if not section_id:
                 return "Error: Could not find a Plex TV library section."
-            response = requests.get(
+            data = await http_get_json(
                 f"{self.valves.PLEX_URL}/library/sections/{section_id}/search",
                 headers=self._get_headers(),
                 params={"type": 4, "query": episode_title},
-                timeout=30
             )
-            response.raise_for_status()
-            data = response.json()
 
             items = data.get("MediaContainer", {}).get("Metadata", [])
 

@@ -14,6 +14,41 @@ the marker `# {{INLINE_SHARED}}` where the inlined block goes.
 
 from difflib import SequenceMatcher
 
+import httpx
+
+
+async def http_get_json(
+    url: str,
+    *,
+    headers: dict = None,
+    params: dict = None,
+    timeout: float = 30.0,
+) -> dict:
+    """Async GET that returns parsed JSON. Raises on transport/HTTP error.
+
+    Per-call AsyncClient is the simple choice — slight overhead vs a
+    long-lived client, but no lifecycle management. For methods that fan out
+    to multiple endpoints, dispatch with asyncio.gather() to parallelize.
+    """
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
+
+
+async def http_post_json(
+    url: str,
+    *,
+    headers: dict = None,
+    json: dict = None,
+    timeout: float = 30.0,
+) -> dict:
+    """Async POST with JSON body. Returns parsed JSON. Raises on error."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(url, headers=headers, json=json)
+        response.raise_for_status()
+        return response.json()
+
 
 def fuzzy_match(query: str, candidates: list, threshold: float = 0.6) -> list:
     """

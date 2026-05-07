@@ -3,12 +3,12 @@ title: Midnight Bazarr Tool
 author: Peter Marino
 description: Subtitle status and management via Bazarr for Midnight
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
+import asyncio
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -48,22 +48,23 @@ class Tools:
         results = []
         errors = []
 
-        # Check movies
-        try:
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/movies",
-                headers=self._get_headers(),
-                timeout=30
-            )
-            response.raise_for_status()
-            movies = response.json().get("data", [])
-            candidates = [(m.get("title", ""), m) for m in movies]
-            matches = fuzzy_match(title, candidates, threshold=0.6)
+        # Fan out movies + series queries in parallel
+        headers = self._get_headers()
+        movies_resp, series_resp = await asyncio.gather(
+            http_get_json(f"{self.valves.BAZARR_URL}/api/movies", headers=headers),
+            http_get_json(f"{self.valves.BAZARR_URL}/api/series", headers=headers),
+            return_exceptions=True,
+        )
 
-            for movie_title, movie, score in matches[:5]:
+        # Movies branch
+        if isinstance(movies_resp, Exception):
+            errors.append(f"Movies query failed: {movies_resp}")
+        else:
+            movies = movies_resp.get("data", [])
+            candidates = [(m.get("title", ""), m) for m in movies]
+            for movie_title, movie, score in fuzzy_match(title, candidates, threshold=0.6)[:5]:
                 missing = movie.get("missing_subtitles", [])
                 existing = movie.get("subtitles", [])
-
                 result = f"🎬 **{movie.get('title')}**\n"
                 if existing:
                     langs = [s.get("code2", "??") for s in existing]
@@ -74,33 +75,22 @@ class Tools:
                 if not existing and not missing:
                     result += "  No subtitle data available\n"
                 results.append(result)
-        except Exception as e:
-            errors.append(f"Movies query failed: {e}")
 
-        # Check TV shows
-        try:
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/series",
-                headers=self._get_headers(),
-                timeout=30
-            )
-            response.raise_for_status()
-            series = response.json().get("data", [])
+        # Series branch
+        if isinstance(series_resp, Exception):
+            errors.append(f"Series query failed: {series_resp}")
+        else:
+            series = series_resp.get("data", [])
             candidates = [(s.get("title", ""), s) for s in series]
-            matches = fuzzy_match(title, candidates, threshold=0.6)
-
-            for show_title, show, score in matches[:5]:
+            for show_title, show, score in fuzzy_match(title, candidates, threshold=0.6)[:5]:
                 episodes_missing = show.get("episodeMissingCount", 0)
                 episodes_total = show.get("episodeFileCount", 0)
-
                 result = f"📺 **{show.get('title')}**\n"
                 if episodes_missing > 0:
                     result += f"  ⚠️ {episodes_missing} episodes missing subtitles\n"
                 else:
                     result += f"  ✓ All {episodes_total} episodes have subtitles\n"
                 results.append(result)
-        except Exception as e:
-            errors.append(f"Series query failed: {e}")
 
         if errors and not results:
             await emit_status(__event_emitter__, "Bazarr unreachable", done=True)
@@ -127,16 +117,18 @@ class Tools:
         count = 0
         errors = []
 
-        # Movies missing subtitles
-        try:
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/movies/wanted",
-                headers=self._get_headers(),
-                params={"length": 20},
-                timeout=30
-            )
-            response.raise_for_status()
-            movies = response.json().get("data", [])
+        # Fan out movies-wanted + episodes-wanted queries in parallel
+        headers = self._get_headers()
+        movies_resp, episodes_resp = await asyncio.gather(
+            http_get_json(f"{self.valves.BAZARR_URL}/api/movies/wanted", headers=headers, params={"length": 20}),
+            http_get_json(f"{self.valves.BAZARR_URL}/api/episodes/wanted", headers=headers, params={"length": 20}),
+            return_exceptions=True,
+        )
+
+        if isinstance(movies_resp, Exception):
+            errors.append(f"Movies-wanted query failed: {movies_resp}")
+        else:
+            movies = movies_resp.get("data", [])
             if movies:
                 result += "**Movies:**\n"
                 for movie in movies[:10]:
@@ -145,19 +137,11 @@ class Tools:
                     langs = [s.get("code2", "??") for s in missing]
                     result += f"  • {title} (missing: {', '.join(langs)})\n"
                     count += 1
-        except Exception as e:
-            errors.append(f"Movies-wanted query failed: {e}")
 
-        # Episodes missing subtitles
-        try:
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/episodes/wanted",
-                headers=self._get_headers(),
-                params={"length": 20},
-                timeout=30
-            )
-            response.raise_for_status()
-            episodes = response.json().get("data", [])
+        if isinstance(episodes_resp, Exception):
+            errors.append(f"Episodes-wanted query failed: {episodes_resp}")
+        else:
+            episodes = episodes_resp.get("data", [])
             if episodes:
                 result += "\n**TV Episodes:**\n"
                 for ep in episodes[:10]:
@@ -168,8 +152,6 @@ class Tools:
                     langs = [s.get("code2", "??") for s in missing]
                     result += f"  • {show} S{season:02d}E{episode:02d} (missing: {', '.join(langs)})\n"
                     count += 1
-        except Exception as e:
-            errors.append(f"Episodes-wanted query failed: {e}")
 
         if errors and count == 0:
             return f"Bazarr error: {'; '.join(errors)}"
@@ -189,24 +171,19 @@ class Tools:
         :param count: Number of recent items to show (default 15)
         :return: Recent subtitle downloads
         """
+        headers = self._get_headers()
+        movies_resp, series_resp = await asyncio.gather(
+            http_get_json(f"{self.valves.BAZARR_URL}/api/history/movies", headers=headers, params={"length": count}),
+            http_get_json(f"{self.valves.BAZARR_URL}/api/history/series", headers=headers, params={"length": count}),
+            return_exceptions=True,
+        )
         try:
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/history/movies",
-                headers=self._get_headers(),
-                params={"length": count},
-                timeout=30
-            )
-            movie_history = response.json().get("data", []) if response.ok else []
-
-            response = requests.get(
-                f"{self.valves.BAZARR_URL}/api/history/series",
-                headers=self._get_headers(),
-                params={"length": count},
-                timeout=30
-            )
-            series_history = response.json().get("data", []) if response.ok else []
+            movie_history = movies_resp.get("data", []) if not isinstance(movies_resp, Exception) else []
+            series_history = series_resp.get("data", []) if not isinstance(series_resp, Exception) else []
 
             if not movie_history and not series_history:
+                if isinstance(movies_resp, Exception) and isinstance(series_resp, Exception):
+                    return f"Bazarr error: {movies_resp}; {series_resp}"
                 return "No recent subtitle download history."
 
             result = "Recent subtitle downloads:\n\n"

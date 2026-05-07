@@ -3,12 +3,11 @@ title: Midnight Tautulli Tool
 author: Peter Marino
 description: Viewing analytics and activity monitoring via Tautulli
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -32,7 +31,7 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
-    def _api_call(self, cmd: str, params: dict = None) -> dict:
+    async def _api_call(self, cmd: str, params: dict = None) -> dict:
         """Make Tautulli API call. Raises on transport/HTTP error."""
         all_params = {
             "apikey": self.valves.TAUTULLI_API_KEY,
@@ -41,13 +40,11 @@ class Tools:
         if params:
             all_params.update(params)
 
-        response = requests.get(
+        body = await http_get_json(
             f"{self.valves.TAUTULLI_URL}/api/v2",
             params=all_params,
-            timeout=30
         )
-        response.raise_for_status()
-        return response.json().get("response", {}).get("data", {})
+        return body.get("response", {}).get("data", {})
 
     async def get_activity(self, __user__: dict = None, __event_emitter__=None) -> str:
         """
@@ -59,7 +56,7 @@ class Tools:
         :return: Current streaming activity
         """
         try:
-            data = self._api_call("get_activity")
+            data = await self._api_call("get_activity")
         except Exception as e:
             return f"Tautulli error: {e}"
 
@@ -121,7 +118,7 @@ class Tools:
         :return: Recent watch history
         """
         try:
-            data = self._api_call("get_history", {"length": count})
+            data = await self._api_call("get_history", {"length": count})
         except Exception as e:
             return f"Tautulli error: {e}"
 
@@ -173,7 +170,7 @@ class Tools:
             ("top_users", "**Most Active Users:**"),
         ):
             try:
-                data = self._api_call("get_home_stats", {
+                data = await self._api_call("get_home_stats", {
                     "stat_id": stat_id,
                     "stats_count": 5,
                     "time_range": days,

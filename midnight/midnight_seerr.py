@@ -3,13 +3,13 @@ title: Midnight Seerr Tool
 author: Peter Marino
 description: Media request management via Seerr (formerly Overseerr) for Midnight
 required_open_webui_version: 0.4.0
-requirements: requests, pydantic
+requirements: httpx, pydantic
 version: 2.0.0
 licence: MIT
 """
 
-import requests
 from typing import Optional
+from urllib.parse import quote
 from pydantic import BaseModel, Field
 
 # {{INLINE_SHARED}}
@@ -40,7 +40,7 @@ class Tools:
             "Content-Type": "application/json"
         }
 
-    def _lookup_title(self, media_type: str, tmdb_id: int) -> Optional[str]:
+    async def _lookup_title(self, media_type: str, tmdb_id: int) -> Optional[str]:
         """Look up a title for a (media_type, tmdb_id) pair, caching across calls.
 
         Returns None on lookup failure rather than raising — partial result
@@ -51,10 +51,10 @@ class Tools:
             return self._title_cache[key]
         try:
             if media_type == "movie":
-                details = self._make_request(f"/movie/{tmdb_id}")
+                details = await self._make_request(f"/movie/{tmdb_id}")
                 title = details.get("title")
             else:
-                details = self._make_request(f"/tv/{tmdb_id}")
+                details = await self._make_request(f"/tv/{tmdb_id}")
                 title = details.get("name")
         except Exception:
             return None
@@ -62,17 +62,15 @@ class Tools:
             self._title_cache[key] = title
         return title
 
-    def _make_request(self, endpoint: str, method: str = "GET", data: dict = None) -> dict:
+    async def _make_request(self, endpoint: str, method: str = "GET", data: dict = None) -> dict:
         """Make API request to Seerr. Raises on transport/HTTP error."""
         url = f"{self.valves.SEERR_URL}/api/v1{endpoint}"
         if method == "GET":
-            response = requests.get(url, headers=self._get_headers(), timeout=30)
+            return await http_get_json(url, headers=self._get_headers())
         elif method == "POST":
-            response = requests.post(url, headers=self._get_headers(), json=data, timeout=30)
+            return await http_post_json(url, headers=self._get_headers(), json=data)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
-        response.raise_for_status()
-        return response.json()
 
     async def search_to_request(self, query: str, __event_emitter__=None) -> str:
         """
@@ -84,7 +82,7 @@ class Tools:
         """
         await emit_status(__event_emitter__, f"Searching Seerr for '{query}'…")
         try:
-            data = self._make_request(f"/search?query={requests.utils.quote(query)}&page=1")
+            data = await self._make_request(f"/search?query={quote(query)}&page=1")
         except Exception as e:
             await emit_status(__event_emitter__, "Seerr unreachable", done=True)
             return f"Seerr error: {e}"
@@ -135,7 +133,7 @@ class Tools:
         :return: Request status message
         """
         try:
-            data = self._make_request("/request", method="POST", data={
+            data = await self._make_request("/request", method="POST", data={
                 "mediaType": "movie",
                 "mediaId": tmdb_id
             })
@@ -158,7 +156,7 @@ class Tools:
         """
         # First get show details to know available seasons
         try:
-            show_data = self._make_request(f"/tv/{tmdb_id}")
+            show_data = await self._make_request(f"/tv/{tmdb_id}")
         except Exception as e:
             return f"Seerr error fetching show details: {e}"
 
@@ -175,7 +173,7 @@ class Tools:
                 return "Invalid seasons format. Use 'all' or comma-separated numbers like '1,2,3'"
 
         try:
-            data = self._make_request("/request", method="POST", data={
+            data = await self._make_request("/request", method="POST", data={
                 "mediaType": "tv",
                 "mediaId": tmdb_id,
                 "seasons": season_list
@@ -196,7 +194,7 @@ class Tools:
         :return: List of pending requests
         """
         try:
-            data = self._make_request("/request?take=20&skip=0&filter=pending")
+            data = await self._make_request("/request?take=20&skip=0&filter=pending")
         except Exception as e:
             return f"Seerr error: {e}"
 
@@ -212,7 +210,7 @@ class Tools:
             type_emoji = "🎬" if media_type == "movie" else "📺"
 
             tmdb_id = media.get("tmdbId")
-            title = self._lookup_title(media_type, tmdb_id) if tmdb_id else None
+            title = await self._lookup_title(media_type, tmdb_id) if tmdb_id else None
             if not title:
                 title = "Unknown"
             
@@ -237,7 +235,7 @@ class Tools:
         :return: List of recent requests
         """
         try:
-            data = self._make_request(f"/request?take={count}&skip=0")
+            data = await self._make_request(f"/request?take={count}&skip=0")
         except Exception as e:
             return f"Seerr error: {e}"
 
@@ -253,7 +251,7 @@ class Tools:
             type_emoji = "🎬" if media_type == "movie" else "📺"
 
             tmdb_id = media.get("tmdbId")
-            title = self._lookup_title(media_type, tmdb_id) if tmdb_id else None
+            title = await self._lookup_title(media_type, tmdb_id) if tmdb_id else None
             if not title:
                 title = "Unknown"
             
