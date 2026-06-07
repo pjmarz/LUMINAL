@@ -154,7 +154,7 @@ Why things are set up the way they are.
 
 OpenWebUI doesn't have its own login. Cloudflare Access sits in front, redirects to Google, and passes the authenticated email via a trusted header (`Cf-Access-Authenticated-User-Email`). OpenWebUI auto-creates the user from that header. No local passwords to manage, and access policy lives in one place instead of scattered across services.
 
-OpenWebUI trusts that header regardless of source IP, so the published port is bound to `127.0.0.1` (cloudflared runs on the host and proxies in) — otherwise anyone on the LAN could hit the container directly and forge the header to log in as any user. `FORWARDED_ALLOW_IPS` pins the trusted upstream to the Docker bridge gateway as defense-in-depth.
+OpenWebUI trusts that header regardless of source IP, which is only safe if nothing untrusted can reach the port. Here cloudflared runs on a separate LAN host and connects to OpenWebUI over the network, so the port stays published on the LAN — closing the direct-access/header-spoofing gap means restricting port 3000 to the tunnel host at the firewall (a `DOCKER-USER` iptables allowlist, since Docker's published ports bypass ufw), not binding to loopback. `FORWARDED_ALLOW_IPS` pins which upstream uvicorn trusts for `X-Forwarded-*` headers as defense-in-depth.
 
 ### Docker Secrets, not env vars
 

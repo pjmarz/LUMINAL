@@ -102,11 +102,7 @@ services:
     networks: [ 'luminal_default' ]
     restart: unless-stopped
     ports:
-      # Bound to loopback ONLY. Cloudflare Access sets the trusted email header;
-      # OpenWebUI honors it regardless of source IP, so the port must NOT be
-      # reachable from the LAN or anyone could spoof the header and log in as
-      # any user. cloudflared runs on the host and proxies to 127.0.0.1.
-      - 127.0.0.1:${OPENWEBUI_PORT:-3000}:8080 # Web UI port (container exposes 8080)
+      - ${OPENWEBUI_PORT:-3000}:8080 # Web UI port (container exposes 8080)
     volumes:
       - openwebui_storage:/app/backend/data # Persistent storage for chat history and settings
     environment:
