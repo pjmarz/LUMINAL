@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-07
+
+### Security
+- **OpenWebUI trusted-header auth was spoofable.** The container published port 3000 on every host interface while trusting `Cf-Access-Authenticated-User-Email`. OpenWebUI honors that header regardless of source IP, so anyone on the LAN could hit the port directly (bypassing Cloudflare Access) and forge the header to log in as any user — including admin. Bound the published port to `127.0.0.1` (cloudflared runs on the host) and added `FORWARDED_ALLOW_IPS`, pinned to the Docker bridge gateway (`172.18.0.1`), as defense-in-depth. Per [OpenWebUI's hardening guidance](https://docs.openwebui.com/getting-started/advanced-topics/hardening/). Also corrected the inaccurate v1.2.0 note that claimed "direct IP access disabled when trusted headers configured" — nothing disabled it.
+
+### Added
+- **SearXNG web-search backend.** Web search was enabled in OpenWebUI but pointed at an engine that didn't exist — there was no SearXNG service and no `SEARXNG_QUERY_URL`, so queries went nowhere. Added a `searxng` service (internal-only, no published port) on `luminal_default`, wired `SEARXNG_QUERY_URL`, and enabled SearXNG's `json` output format (off by default, required by OpenWebUI). New `luminal_searxng_storage` external volume holds its `settings.yml` + secret key. Verified the JSON endpoint returns 200 end-to-end.
+- **Container healthchecks across the whole stack + dependency gating.** Added healthchecks to `ollama` (`ollama ps`), `qdrant` (`bash`/`/dev/tcp` — the image ships no `curl`/`wget`/`nc`), `n8n` (`/healthz/readiness`), `searxng` (`/healthz`), `homeassistant` (`curl :8123`), and `matter-server` (`curl :5580`). OpenWebUI's image-baked healthcheck is left intact. The model pullers and OpenWebUI now gate on `condition: service_healthy` / `service_completed_successfully`, replacing the `sleep 3/6/9` readiness hacks with real ordering. `docker-rebuild.sh`'s post-update health check now gets a true signal from every service, not just OpenWebUI.
+
+### Changed
+- **OpenWebUI now runs the `:cuda` image.** The previous `:latest` image is CPU-only and silently ignored the GPU reservation in the compose file. The `:cuda` build GPU-accelerates the RAG path (embeddings, reranking, Whisper STT) — verified the container sees the GPU. OpenWebUI still does not run LLM inference; that remains Ollama's job.
+- **Web-search env vars renamed** from the deprecated `ENABLE_RAG_WEB_SEARCH` / `RAG_WEB_SEARCH_ENGINE` to the current `ENABLE_WEB_SEARCH` / `WEB_SEARCH_ENGINE`.
+- **`env.sh` model pin corrected** from the stale `gemma3:12b` to `gemma4:e4b`, matching `.env` and the documented Midnight base model (a fresh `compose up` from a direnv shell would otherwise have pulled the old model).
+
+### Fixed
+- **n8n Execute Command node never actually re-enabled.** The compose used `N8N_NODES_INCLUDE=n8n-nodes-base.executeCommand`, which is not a real n8n variable, and n8n 2.0's default-disabled nodes can't be re-enabled via an include anyway. Replaced with `NODES_EXCLUDE=["n8n-nodes-base.localFileTrigger"]`, which clears Execute Command from the default blocklist while keeping the Local File Trigger node blocked.
+- **README accuracy:** OpenWebUI does not run inference (Ollama does); `gpt-oss:20b` is ~13 GB on disk, not ~20 GB. Removed two env vars that no service reads (`LOG_LEVEL`, `HOMEASSISTANT_PORT`).
+
 ## [1.5.1] - 2026-05-07
 
 ### Fixed
@@ -123,7 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - **Zero Trust Architecture**: OpenWebUI now requires Cloudflare Access authentication
   - All traffic must pass through Cloudflare tunnel
-  - Direct IP access disabled when trusted headers configured
+  - Direct IP access must be blocked at the network layer — the trusted email header is honored regardless of source IP, so the OpenWebUI port is bound to loopback behind the tunnel (corrected in 1.5.x; the original "disabled when trusted headers configured" wording was inaccurate)
   - Access policies managed in Cloudflare Zero Trust dashboard
 
 ## [1.1.0] - 2025-12-17

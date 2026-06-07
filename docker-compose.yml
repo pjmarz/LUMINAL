@@ -32,7 +32,7 @@ services:
       - WEBHOOK_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}/
       - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
       - N8N_USER_MANAGEMENT_JWT_SECRET_FILE=/run/secrets/n8n_jwt_secret
-      - N8N_NODES_INCLUDE=n8n-nodes-base.executeCommand # Re-enable Execute Command node (disabled by default in n8n 2.0)
+      - NODES_EXCLUDE=["n8n-nodes-base.localFileTrigger"] # Re-enable Execute Command (in n8n 2.0 the default-disabled nodes are cleared by REPLACING the exclude list; this keeps only LocalFileTrigger blocked). N8N_NODES_INCLUDE is not a real n8n var.
     ports:
       - ${N8N_PORT:-5678}:5678
     volumes:
@@ -41,6 +41,12 @@ services:
     secrets:
       - n8n_encryption_key
       - n8n_jwt_secret
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:5678/healthz/readiness || exit 1" ] # /readiness = DB migrations applied
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # ==== QDRANT ====
   # Vector database for semantic search and embeddings storage
@@ -55,32 +61,74 @@ services:
       - ${QDRANT_PORT:-6333}:6333 # Vector database API port
     volumes:
       - qdrant_storage:/qdrant/storage # Persistent storage for vector embeddings
+    healthcheck:
+      # qdrant image ships no curl/wget/nc — but it has bash, so probe the port via /dev/tcp
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ==== SEARXNG ====
+  # Privacy-respecting metasearch engine. Backend for OpenWebUI's web-search RAG
+  # (WEB_SEARCH_ENGINE=searxng). Internal-only — no host port published.
+  # POST-CREATE (one time): OpenWebUI needs SearXNG's JSON output, which is OFF by
+  # default. In the generated searxng_storage settings.yml, set a unique
+  # `server.secret_key` and add `json` under `search.formats`, then restart searxng.
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    hostname: searxng
+    networks: [ 'luminal_default' ]
+    restart: unless-stopped
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080/
+    volumes:
+      - searxng_storage:/etc/searxng # Persistent storage for settings.yml + secret_key
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # ==== OPENWEBUI ====
   # Self-hosted AI chat interface with RAG capabilities
   # Provides chat interface for Ollama models with Qdrant vector database integration
   openwebui:
-    image: ghcr.io/open-webui/open-webui:latest
+    image: ghcr.io/open-webui/open-webui:cuda # :cuda build — GPU-accelerated embeddings/reranking/Whisper. The :latest image is CPU-only and ignores the GPU reservation below.
     container_name: openwebui
     hostname: openwebui
     networks: [ 'luminal_default' ]
     restart: unless-stopped
     ports:
-      - ${OPENWEBUI_PORT:-3000}:8080 # Web UI port (container exposes 8080)
+      # Bound to loopback ONLY. Cloudflare Access sets the trusted email header;
+      # OpenWebUI honors it regardless of source IP, so the port must NOT be
+      # reachable from the LAN or anyone could spoof the header and log in as
+      # any user. cloudflared runs on the host and proxies to 127.0.0.1.
+      - 127.0.0.1:${OPENWEBUI_PORT:-3000}:8080 # Web UI port (container exposes 8080)
     volumes:
       - openwebui_storage:/app/backend/data # Persistent storage for chat history and settings
     environment:
       - TZ=${TZ} # So Midnight tools render Plex addedAt dates in the user's local timezone
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
       - WEBUI_SECRET_KEY_FILE=/run/secrets/openwebui_secret_key # Secret key from Docker Secrets
-      - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH:-true}
-      - RAG_WEB_SEARCH_ENGINE=${RAG_WEB_SEARCH_ENGINE:-searxng}
+      # Web search (current var names; the RAG_WEB_SEARCH_* names are deprecated).
+      # searxng is the backend service defined below; SEARXNG_QUERY_URL must be set
+      # or the engine has nowhere to query. <query> is the literal placeholder.
+      - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
+      - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE:-searxng}
+      - SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL:-http://searxng:8080/search?q=<query>}
       - VECTOR_DB=${VECTOR_DB:-qdrant}
       - QDRANT_URI=${QDRANT_URI:-http://qdrant:6333}
-      # Cloudflare Access SSO - Trusted header authentication
+      # Cloudflare Access SSO - Trusted header authentication.
+      # FORWARDED_ALLOW_IPS pins which upstream may set X-Forwarded-* headers to the
+      # docker bridge gateway (what the container sees host->container traffic as).
+      # Defense-in-depth on top of the loopback port bind above.
       - WEBUI_URL=https://openwebui.welcometomarz.net
       - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
       - WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
+      - FORWARDED_ALLOW_IPS=${OPENWEBUI_FORWARDED_ALLOW_IPS:-172.18.0.1}
       - ENABLE_OAUTH_SIGNUP=true
     secrets:
       - openwebui_secret_key # Docker Secret for authentication
@@ -91,9 +139,11 @@ services:
             - driver: nvidia # NVIDIA GPU acceleration for AI inference
               count: 1
               capabilities: [ gpu ]
-    depends_on:
-      - ollama # Wait for Ollama to be ready
-      - qdrant # Wait for Qdrant to be ready
+    depends_on: # openwebui keeps its own image-baked healthcheck; gate startup on deps being healthy
+      ollama:
+        condition: service_healthy # wait until Ollama's API is actually serving
+      qdrant:
+        condition: service_healthy # wait until Qdrant is accepting connections
 
   # ==== HOME ASSISTANT ====
   # Self-hosted home automation platform with AI integration
@@ -112,6 +162,13 @@ services:
     volumes:
       - homeassistant_storage:/config # Persistent storage for Home Assistant configuration
       - ./luminal_resolv.conf:/etc/resolv.conf:ro # Force custom DNS configuration
+    healthcheck:
+      # host network → localhost:8123 is HA itself. Generous start_period: HA boot can take a minute+
+      test: [ "CMD", "curl", "-fsS", "http://localhost:8123/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
 
   # ==== MATTER SERVER ====
   # Helper service for Home Assistant Matter integration
@@ -126,6 +183,12 @@ services:
     network_mode: host # Must be on host network to communicate with HA on host network
     volumes:
       - matter_storage:/data
+    healthcheck:
+      test: [ "CMD", "curl", "-fsS", "http://localhost:5580" ] # host network; ws endpoint returns 200 on plain GET
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # ==== OLLAMA ====
   # Local LLM inference server with NVIDIA GPU acceleration
@@ -149,6 +212,12 @@ services:
             - driver: nvidia # NVIDIA GPU acceleration for LLM inference
               count: 1
               capabilities: [ gpu ]
+    healthcheck:
+      test: [ "CMD", "ollama", "ps" ] # bundled binary hits the local API; stays responsive even while a model loads
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # ==== OLLAMA MODEL PULLERS ====
   # One-time initialization containers to download LLM models
@@ -166,9 +235,10 @@ services:
       - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 3; ollama pull ${OLLAMA_MODEL_LLAMA:-llama3.1:8b}"
+      - "ollama pull ${OLLAMA_MODEL_LLAMA:-llama3.1:8b}"
     depends_on:
-      - ollama
+      ollama:
+        condition: service_healthy # gate on real readiness instead of a fixed sleep
 
   # Pull gemma4:e4b model (9.6GB) - Frontier-level multimodal model with native tool use
   ollama-pull-gemma:
@@ -182,10 +252,12 @@ services:
       - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 6; ollama pull ${OLLAMA_MODEL_GEMMA:-gemma4:e4b}"
+      - "ollama pull ${OLLAMA_MODEL_GEMMA:-gemma4:e4b}"
     depends_on:
-      - ollama
-      - ollama-pull-llama
+      ollama:
+        condition: service_healthy
+      ollama-pull-llama:
+        condition: service_completed_successfully # serialize pulls: wait for llama to finish
 
   # Pull gpt-oss:20b model (~20GB) - Maximum capability for advanced reasoning
   ollama-pull-gpt-oss:
@@ -199,10 +271,12 @@ services:
       - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "sleep 9; ollama pull ${OLLAMA_MODEL_GPT_OSS:-gpt-oss:20b}"
+      - "ollama pull ${OLLAMA_MODEL_GPT_OSS:-gpt-oss:20b}"
     depends_on:
-      - ollama
-      - ollama-pull-gemma
+      ollama:
+        condition: service_healthy
+      ollama-pull-gemma:
+        condition: service_completed_successfully
 
 # Networks for service communication
 networks:
@@ -220,6 +294,9 @@ volumes:
   qdrant_storage:
     external: true
     name: luminal_qdrant_storage
+  searxng_storage:
+    external: true
+    name: luminal_searxng_storage
   openwebui_storage:
     external: true
     name: luminal_openwebui_storage

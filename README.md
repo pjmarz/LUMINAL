@@ -55,10 +55,15 @@ Midnight talks to a separate media stack ([HELIOS](https://github.com/pjmarz/HEL
       <td>Local LLM inference with GPU acceleration.</td>
     </tr>
     <tr>
-      <td rowspan="2"><b>🧠 AI Infrastructure</b></td>
+      <td rowspan="3"><b>🧠 AI Infrastructure</b></td>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/qdrant.png" width="32" height="32" alt="Qdrant"></td>
       <td><b><a href="https://github.com/qdrant/qdrant">Qdrant</a></b></td>
       <td>Vector DB for OpenWebUI's RAG.</td>
+    </tr>
+    <tr>
+      <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/searxng.png" width="32" height="32" alt="SearXNG"></td>
+      <td><b><a href="https://github.com/searxng/searxng">SearXNG</a></b></td>
+      <td>Metasearch backend for OpenWebUI's web-search RAG.</td>
     </tr>
     <tr>
       <td align="center"><img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/docker.png" width="36" height="24" alt="Docker"></td>
@@ -91,7 +96,7 @@ Three models get pulled on first boot and cached on disk. Each does something di
 
 - `llama3.1:8b` (4.9 GB) — fast general-purpose model. Good for quick chat and simple tool calls.
 - `gemma4:e4b` (9.6 GB) — multimodal with native tool use. This is what Midnight runs on.
-- `gpt-oss:20b` (~20 GB) — heavier reasoning when capability matters more than latency.
+- `gpt-oss:20b` (~13 GB on disk, 20B params) — heavier reasoning when capability matters more than latency.
 
 All three share one Ollama instance and one GPU.
 
@@ -149,6 +154,8 @@ Why things are set up the way they are.
 
 OpenWebUI doesn't have its own login. Cloudflare Access sits in front, redirects to Google, and passes the authenticated email via a trusted header (`Cf-Access-Authenticated-User-Email`). OpenWebUI auto-creates the user from that header. No local passwords to manage, and access policy lives in one place instead of scattered across services.
 
+OpenWebUI trusts that header regardless of source IP, so the published port is bound to `127.0.0.1` (cloudflared runs on the host and proxies in) — otherwise anyone on the LAN could hit the container directly and forge the header to log in as any user. `FORWARDED_ALLOW_IPS` pins the trusted upstream to the Docker bridge gateway as defense-in-depth.
+
 ### Docker Secrets, not env vars
 
 Credentials (n8n encryption key, JWT secret, OpenWebUI session key) are mounted as files via Docker Secrets. They don't show up in `env`, process dumps, or compose logs. The plaintext files live in a locked-down system directory outside the repo.
@@ -165,13 +172,15 @@ Every piece of persistent state (n8n workflows, Ollama model cache, Qdrant indic
 
 `scripts/docker-rebuild.sh` pulls new images first, then runs `docker compose up -d` so only the services whose images actually changed get recreated. Everything else keeps running. It also runs a health check that skips the one-shot Ollama pullers (they're supposed to exit), retries transient failures, and returns 0/1/2 exit codes so cron can alert properly. `--dry-run` shows what would change without touching anything.
 
+Every long-running service declares its own Docker `healthcheck` (Qdrant probes its port via `bash`/`/dev/tcp` since its image ships no HTTP client; the rest hit `/healthz`-style endpoints), and startup ordering is gated on `condition: service_healthy` instead of fixed sleeps. So the script's health check gets a true signal from the whole stack, and the model pullers wait for Ollama to actually be serving before they run.
+
 ### Anti-hallucination prompt engineering
 
 Midnight's system prompt assumes the model will hallucinate if allowed to. Every question has to go through a tool call. The prompt explicitly bans answering from model knowledge when a tool could answer instead. It normalizes curly quotes in input and uses RAG against `MIDNIGHT_REFERENCE.md` to pick the right tool. Trade-off: Midnight is occasionally too strict and refuses things it could reasonably answer. Better than made-up movie titles.
 
-### GPU passthrough for inference
+### GPU passthrough
 
-Ollama and OpenWebUI both reserve an NVIDIA GPU in the compose file. Inference runs at hardware speed. No API costs, no rate limits, nothing leaving the box.
+Ollama runs all LLM inference on the NVIDIA GPU at hardware speed — no API costs, no rate limits, nothing leaving the box. OpenWebUI runs the `:cuda` image so its RAG side (embeddings, reranking, Whisper STT) is GPU-accelerated too; it does *not* run LLM inference itself — that's Ollama's job. Both reserve the GPU in the compose file (the plain `:latest` OpenWebUI image is CPU-only and would silently ignore the reservation).
 
 ## 📜 Changelog
 
