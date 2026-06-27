@@ -434,6 +434,45 @@ check_plex_update() {
 }
 
 # ---------------------------------------------------------------------------
+# harden_secrets — enforce owner-only (0600) perms on the Docker secret files
+# and their directory. Docker reads these as root at container creation, so
+# 0600 is sufficient while keeping them unreadable by any other local user.
+# Idempotent and self-healing: if a secret file is ever recreated with a lax
+# umask (leaving it world-readable, 0644), this resets it on the next rebuild.
+# ---------------------------------------------------------------------------
+harden_secrets() {
+    local secrets_dir="${EFFECTIVE_PROJECT_DIR}/secrets"
+    if [[ ! -d "$secrets_dir" ]]; then
+        log "No secrets/ directory — skipping secret permission hardening"
+        return 0
+    fi
+
+    # Directory: drop group/other traversal (owner + root only).
+    chmod 750 "$secrets_dir" 2>/dev/null || log "WARNING: could not chmod secrets/ directory"
+
+    local f mode changed=0
+    shopt -s nullglob
+    for f in "$secrets_dir"/*.txt; do
+        mode=$(stat -c '%a' "$f" 2>/dev/null)
+        if [[ "$mode" != "600" ]]; then
+            if chmod 600 "$f" 2>/dev/null; then
+                log "Hardened secret perms: $(basename "$f") (${mode} -> 600)"
+                changed=$((changed + 1))
+            else
+                log "WARNING: could not chmod $(basename "$f")"
+            fi
+        fi
+    done
+    shopt -u nullglob
+
+    if [[ $changed -eq 0 ]]; then
+        log "Secret file permissions OK (all 0600)"
+    else
+        log "Re-hardened ${changed} secret file(s) to 0600"
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Main execution
 # ---------------------------------------------------------------------------
 log "Starting safe rebuild for ${PROJECT_NAME}..."
@@ -464,6 +503,9 @@ if [[ "$DRY_RUN" == "true" ]]; then
     log "Images have been pulled. Run without --dry-run to apply."
     exit 0
 fi
+
+# Step 4.5: Enforce secret file permissions before recreating containers
+harden_secrets
 
 # Step 5: Recreate services (only changed containers restart)
 # On failure: downgrade to partial failure and let health check assess damage.
