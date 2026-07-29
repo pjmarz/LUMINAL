@@ -58,7 +58,10 @@ services:
     networks: [ 'luminal_default' ]
     restart: unless-stopped
     ports:
-      - ${QDRANT_PORT:-6333}:6333 # Vector database API port
+      # Loopback-only: Qdrant ships no authentication, and its sole consumer is
+      # OpenWebUI over the docker network (QDRANT_URI=http://qdrant:6333).
+      # Publishing to 0.0.0.0 let any LAN/tailnet host read and drop collections.
+      - 127.0.0.1:${QDRANT_PORT:-6333}:6333 # Vector database API port (host-local only)
     volumes:
       - qdrant_storage:/qdrant/storage # Persistent storage for vector embeddings
     healthcheck:
@@ -115,8 +118,29 @@ services:
       - ENABLE_WEB_SEARCH=${ENABLE_WEB_SEARCH:-true}
       - WEB_SEARCH_ENGINE=${WEB_SEARCH_ENGINE:-searxng}
       - SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL:-http://searxng:8080/search?q=<query>}
+      # Ollama Cloud key, also usable as the "ollama" web-search engine (WEB_SEARCH_ENGINE=ollama).
+      # Set but not selected — searxng stays the active engine until deliberately switched.
+      - OLLAMA_CLOUD_API_KEY=${OLLAMA_CLOUD_API_KEY:-}
+      # Ollama Cloud exposed as an OpenAI-compatible connection so its hosted models appear in
+      # the picker next to the local ones, prefixed "cloud." (e.g. cloud.gpt-oss:120b).
+      # Index 0 stays the stock OpenAI entry (no key set); index 1 is Ollama Cloud.
+      # NOTE: these two are PersistentConfig — OpenWebUI only reads them when the key is absent
+      # from webui.db, i.e. on a fresh openwebui_storage volume. The live values are the
+      # openai.* rows in that DB; keep the two in sync when changing either.
+      # openai.api_configs["1"].model_ids in that DB pins the connection to the 8 models this
+      # (free-tier) account can actually run — ollama.com advertises 19, the other 11 return
+      # 403 "requires a subscription". Clear model_ids to auto-list everything after upgrading.
+      - OPENAI_API_BASE_URLS=https://api.openai.com/v1;${OLLAMA_CLOUD_BASE_URL:-https://ollama.com/v1}
+      - OPENAI_API_KEYS=;${OLLAMA_CLOUD_API_KEY:-}
       - VECTOR_DB=${VECTOR_DB:-qdrant}
       - QDRANT_URI=${QDRANT_URI:-http://qdrant:6333}
+      # RAG embeddings run on Ollama (embeddinggemma:300m, 768-dim) rather than the image-baked
+      # sentence-transformers all-MiniLM-L6-v2 (384-dim). Reranking stays on sentence-transformers
+      # in-process — Ollama has no rerank endpoint. Also PersistentConfig; live values are the
+      # rag.* rows in webui.db. Changing the embedding model changes vector width, so the Qdrant
+      # collections must be dropped and re-indexed (they are recreated on next use).
+      - RAG_EMBEDDING_ENGINE=${RAG_EMBEDDING_ENGINE:-ollama}
+      - RAG_EMBEDDING_MODEL=${RAG_EMBEDDING_MODEL:-embeddinggemma:300m}
       # Cloudflare Access SSO - Trusted header authentication.
       # FORWARDED_ALLOW_IPS pins which upstream may set X-Forwarded-* headers to the
       # docker bridge gateway (what the container sees host->container traffic as).
@@ -124,7 +148,12 @@ services:
       - WEBUI_URL=https://openwebui.welcometomarz.net
       - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
       - WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
-      - FORWARDED_ALLOW_IPS=${OPENWEBUI_FORWARDED_ALLOW_IPS:-172.18.0.1}
+      # cloudflared runs on charon and reaches this container over the LAN, so the
+      # peer uvicorn sees is 192.168.4.172 — verified: a request from glados logged
+      # source 192.168.4.136, i.e. real LAN IPs arrive un-SNATed. The previous
+      # 172.18.0.1-only value never matched the tunnel and so trusted nothing;
+      # the bridge gateway is kept for host-local requests.
+      - FORWARDED_ALLOW_IPS=${OPENWEBUI_FORWARDED_ALLOW_IPS:-192.168.4.172,172.18.0.1}
       - ENABLE_OAUTH_SIGNUP=true
     secrets:
       - openwebui_secret_key # Docker Secret for authentication
@@ -198,7 +227,12 @@ services:
       - 192.168.4.1
       - 1.1.1.1
     ports:
-      - ${OLLAMA_PORT:-11434}:11434 # Ollama API port for LLM inference
+      # Loopback-only: Ollama has no authentication, so a 0.0.0.0 publish let any
+      # LAN *or tailnet* host enumerate models and call /api/generate (compute abuse),
+      # /api/pull and /api/delete (model tampering). In-stack consumers use docker DNS
+      # (ollama:11434); Home Assistant runs network_mode: host so it reaches 127.0.0.1
+      # — its ollama config entry is pinned to http://127.0.0.1:11434 to match.
+      - 127.0.0.1:${OLLAMA_PORT:-11434}:11434 # Ollama API port (host-local only)
     volumes:
       - ollama_storage:/root/.ollama # Persistent storage for downloaded models
     deploy:
@@ -217,13 +251,20 @@ services:
 
   # ==== OLLAMA MODEL PULLERS ====
   # One-time initialization containers to download LLM models
-  # These containers run once to pull models, then exit
+  # These containers run once to pull models, then exit.
+  #
+  # These MUST track the intended local model set: a `compose up` re-pulls whatever
+  # is listed here, so a stale entry silently resurrects a deleted model. The set was
+  # re-chosen against measured 8 GB-VRAM behaviour (see CHANGELOG [Unreleased]):
+  # llama3.1:8b was superseded by qwen3.5:9b, and gpt-oss:20b was dropped for spilling
+  # ~half its weights to CPU at 8.2 tok/s — it is now reached via cloud.gpt-oss:120b.
+  # Pulls stay serialized so four large downloads don't saturate the link at once.
 
-  # Pull llama3.1:8b model (4.9GB) - Fast general-purpose model
-  ollama-pull-llama:
+  # qwen3.5:9b (6.6GB) - primary local chat model; vision + tools + thinking, 100% GPU-resident
+  ollama-pull-qwen:
     image: ollama/ollama:latest
     networks: [ 'luminal_default' ]
-    container_name: ollama-pull-llama
+    container_name: ollama-pull-qwen
     volumes:
       - ollama_storage:/root/.ollama # Share storage with main Ollama service
     entrypoint: /bin/sh
@@ -231,12 +272,12 @@ services:
       - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "ollama pull ${OLLAMA_MODEL_LLAMA:-llama3.1:8b}"
+      - "ollama pull ${OLLAMA_MODEL_QWEN:-qwen3.5:9b}"
     depends_on:
       ollama:
         condition: service_healthy # gate on real readiness instead of a fixed sleep
 
-  # Pull gemma4:e4b model (9.6GB) - Frontier-level multimodal model with native tool use
+  # gemma4:e4b (9.6GB on disk, ~3.2GB active slice) - Midnight's base model; fastest here
   ollama-pull-gemma:
     image: ollama/ollama:latest
     networks: [ 'luminal_default' ]
@@ -252,14 +293,15 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-      ollama-pull-llama:
-        condition: service_completed_successfully # serialize pulls: wait for llama to finish
+      ollama-pull-qwen:
+        condition: service_completed_successfully # serialize pulls
 
-  # Pull gpt-oss:20b model (~20GB) - Maximum capability for advanced reasoning
-  ollama-pull-gpt-oss:
+  # embeddinggemma:300m (621MB, 768-dim) - REQUIRED: OpenWebUI's RAG embedder.
+  # RAG_EMBEDDING_ENGINE=ollama means retrieval breaks outright if this is absent.
+  ollama-pull-embed:
     image: ollama/ollama:latest
     networks: [ 'luminal_default' ]
-    container_name: ollama-pull-gpt-oss
+    container_name: ollama-pull-embed
     volumes:
       - ollama_storage:/root/.ollama # Share storage with main Ollama service
     entrypoint: /bin/sh
@@ -267,11 +309,32 @@ services:
       - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
     command:
       - "-c"
-      - "ollama pull ${OLLAMA_MODEL_GPT_OSS:-gpt-oss:20b}"
+      - "ollama pull ${OLLAMA_MODEL_EMBED:-embeddinggemma:300m}"
     depends_on:
       ollama:
         condition: service_healthy
       ollama-pull-gemma:
+        condition: service_completed_successfully
+
+  # huihui_ai/gemma-4-abliterated:e4b (9.6GB, ~3.2GB active) - uncensored variant.
+  # Community rebuild of gemma4:e4b; benchmarked identical (74.9 vs 75.0 tok/s) and
+  # tool-calling verified intact. Same nested arch, so same modest VRAM footprint.
+  ollama-pull-gemma-abliterated:
+    image: ollama/ollama:latest
+    networks: [ 'luminal_default' ]
+    container_name: ollama-pull-gemma-abliterated
+    volumes:
+      - ollama_storage:/root/.ollama # Share storage with main Ollama service
+    entrypoint: /bin/sh
+    environment:
+      - OLLAMA_HOST=${OLLAMA_BASE_URL:-ollama:11434}
+    command:
+      - "-c"
+      - "ollama pull ${OLLAMA_MODEL_GEMMA_ABLITERATED:-huihui_ai/gemma-4-abliterated:e4b}"
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-pull-embed:
         condition: service_completed_successfully
 
 # Networks for service communication
