@@ -78,10 +78,19 @@ _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "${_SCRIPT_DIR}/_common.sh" ]]; then
     source "${_SCRIPT_DIR}/_common.sh"
 else
-    # Fallback: minimal logging if _common.sh is not available (e.g. testing)
-    log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $*"; }
+    # Fallback: _common.sh is not deployed on this host (dev). Log to LUMINAL's
+    # own logs/ directory the way ARK's rebuild script does, so nightly rebuilds
+    # leave a real on-host record instead of going to /dev/null.
     HELIOS_ROOT="$(cd "${_SCRIPT_DIR}/.." && pwd)"
-    LOG_FILE="/dev/null"
+    LOG_DIR="${HELIOS_ROOT}/logs"
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    LOG_FILE="${LOG_DIR}/docker-rebuild.log"
+    log() {
+        local msg
+        msg="$(date '+%Y-%m-%d %H:%M:%S') - $*"
+        echo "$msg"
+        echo "$msg" >> "$LOG_FILE" 2>/dev/null || true
+    }
 fi
 
 # Resolve the effective project directory

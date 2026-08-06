@@ -27,7 +27,8 @@ services:
       - N8N_RUNNERS_ENABLED=${N8N_RUNNERS_ENABLED:-true}
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE:-false} # Disable secure cookies for local development
       - N8N_EDITOR_BASE_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}
-      - N8N_HOST=0.0.0.0
+      # N8N_HOST removed (2026-08 audit): it expects a hostname, not a bind address;
+      # editor/webhook URLs are already explicit above so the default is correct.
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://${N8N_HOST_IP}:${N8N_PORT:-5678}/
       - N8N_ENCRYPTION_KEY_FILE=/run/secrets/n8n_encryption_key
@@ -155,10 +156,16 @@ services:
       # the bridge gateway is kept for host-local requests.
       - FORWARDED_ALLOW_IPS=${OPENWEBUI_FORWARDED_ALLOW_IPS:-192.168.4.172,172.18.0.1}
       - ENABLE_OAUTH_SIGNUP=true
+      # SSO-only hardening (2026-08 audit): auth arrives via the Cf-Access trusted
+      # headers above, so the local password form is a second, weaker front door —
+      # disable it. Admin recovery if SSO ever breaks: unset this and recreate.
+      - ENABLE_LOGIN_FORM=false
     secrets:
       - openwebui_secret_key # Docker Secret for authentication
     deploy:
       resources:
+        limits:
+          memory: 4g # guardrail (2026-08 audit): embeddings/RAG spikes can't starve HA/Immich on the shared 16G VM
         reservations:
           devices:
             - driver: nvidia # NVIDIA GPU acceleration for AI inference
@@ -199,7 +206,11 @@ services:
   # Helper service for Home Assistant Matter integration
   # Required for Matter device control in Docker environments
   matter-server:
-    image: ghcr.io/home-assistant-libs/python-matter-server:stable
+    # Migrated off ghcr.io/home-assistant-libs/python-matter-server (2026-08 audit):
+    # that upstream repo is ARCHIVED/EOL; matter.js's matterjs-server is the
+    # maintained drop-in successor (same /data storage mount, same ws API on 5580).
+    # Fabric had no commissioned nodes at migration time (verified 2026-08-06).
+    image: ghcr.io/matter-js/matterjs-server:stable
     container_name: matter-server
     restart: unless-stopped
     # specific security options required for Matter
@@ -209,7 +220,8 @@ services:
     volumes:
       - matter_storage:/data
     healthcheck:
-      test: [ "CMD", "curl", "-fsS", "http://localhost:5580" ] # host network; ws endpoint returns 200 on plain GET
+      # image is bare node (no curl); any HTTP response on 5580 proves liveness
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:5580').then(()=>process.exit(0),()=>process.exit(1))" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -235,6 +247,11 @@ services:
       - 127.0.0.1:${OLLAMA_PORT:-11434}:11434 # Ollama API port (host-local only)
     volumes:
       - ollama_storage:/root/.ollama # Persistent storage for downloaded models
+    environment:
+      # VRAM tuning on the shared 8GB RTX 2070 SUPER (2026-08 audit):
+      - OLLAMA_FLASH_ATTENTION=1 # cuts KV-cache memory as context grows
+      - OLLAMA_KV_CACHE_TYPE=q8_0 # quantized KV cache — ~half the cache VRAM, negligible quality cost
+      - OLLAMA_MAX_LOADED_MODELS=1 # one resident model; the card is shared with OpenWebUI + Immich ML
     deploy:
       resources:
         reservations:
