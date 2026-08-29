@@ -92,13 +92,14 @@ Midnight talks to a separate media stack ([HELIOS](https://github.com/pjmarz/HEL
 
 ## 🧠 AI Models
 
-Three models get pulled on first boot and cached on disk. Each does something different:
+Four models get pulled on first boot and cached on disk. Each does something different:
 
-- `llama3.1:8b` (4.9 GB) — fast general-purpose model. Good for quick chat and simple tool calls.
-- `gemma4:e4b` (9.6 GB) — multimodal with native tool use. This is what Midnight runs on.
-- `gpt-oss:20b` (~13 GB on disk, 20B params) — heavier reasoning when capability matters more than latency.
+- `qwen3.5:9b` (6.6 GB) — primary local chat model. Vision, tools, and thinking, with a 262K context window.
+- `gemma4:e4b` (9.6 GB on disk, ~3.2 GB active) — Midnight's base model and the fastest here at 75 tok/s. The nested architecture loads a small active slice rather than the whole file. Multimodal across vision and audio, with native tool use.
+- `huihui_ai/gemma-4-abliterated:e4b` (9.6 GB) — uncensored rebuild of gemma4. Benchmarks identical (74.9 vs 75.0 tok/s) and tool calling survives abliteration.
+- `embeddinggemma:300m` (621 MB, 768-dim) — the RAG embedder. OpenWebUI retrieval breaks outright without it.
 
-All three share one Ollama instance and one GPU.
+All four share one Ollama instance and one GPU — an RTX 2070 SUPER with 8 GB of VRAM, which is the real constraint on model size. Anything heavier goes to Ollama Cloud via the `cloud.` connection: `gpt-oss:20b` ran locally at 8.2 tok/s with half its weights spilled to CPU, while `cloud.gpt-oss:120b` is 6× the parameters at 3.6× the speed for zero local VRAM.
 
 ## 🌙 Midnight Media Assistant
 
