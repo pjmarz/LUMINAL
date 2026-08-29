@@ -147,19 +147,26 @@ services:
       # docker bridge gateway (what the container sees host->container traffic as).
       # Defense-in-depth on top of the loopback port bind above.
       - WEBUI_URL=https://openwebui.welcometomarz.net
-      - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
-      - WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
+      # DISABLED 2026-08-22: trusting an upstream auth header made the proxy the SOLE
+      # identity source. You could not log out (the next request re-authed straight from
+      # the header), and the account shown was the proxy identity rather than the local
+      # one. App-layer header trust also means the app cannot tell who set the header, so
+      # it only holds if everything able to reach it is trusted. Now the edge gates access
+      # AND OpenWebUI verifies its own credentials = defense in depth. Do not re-enable
+      # without re-reading that tradeoff (it also requires ENABLE_LOGIN_FORM=false).
+      # - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=Cf-Access-Authenticated-User-Email
+      # - WEBUI_AUTH_TRUSTED_NAME_HEADER=Cf-Access-Authenticated-User-Name
       # cloudflared runs on charon and reaches this container over the LAN, so the
       # peer uvicorn sees is 192.168.4.172 — verified: a request from glados logged
       # source 192.168.4.136, i.e. real LAN IPs arrive un-SNATed. The previous
       # 172.18.0.1-only value never matched the tunnel and so trusted nothing;
       # the bridge gateway is kept for host-local requests.
       - FORWARDED_ALLOW_IPS=${OPENWEBUI_FORWARDED_ALLOW_IPS:-192.168.4.172,172.18.0.1}
-      - ENABLE_OAUTH_SIGNUP=true
+      - ENABLE_OAUTH_SIGNUP=false  # 2026-08-22: stop auto-provisioning accounts from headers/OAuth
       # SSO-only hardening (2026-08 audit): auth arrives via the Cf-Access trusted
       # headers above, so the local password form is a second, weaker front door —
       # disable it. Admin recovery if SSO ever breaks: unset this and recreate.
-      - ENABLE_LOGIN_FORM=false
+      - ENABLE_LOGIN_FORM=true   # 2026-08-22: REQUIRED now that trusted headers are off
     secrets:
       - openwebui_secret_key # Docker Secret for authentication
     deploy:
