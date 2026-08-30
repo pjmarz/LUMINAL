@@ -20,7 +20,7 @@ Midnight is a custom assistant written on top of OpenWebUI that talks to the [HE
 
 Everything runs as Docker containers on a Proxmox VM. The stack breaks down like this:
 
-- **Auth** — Cloudflare Access sits in front. Google OAuth via trusted headers. No local passwords.
+- **Auth** — Cloudflare Access sits in front (Google at the edge), and since 2026-08-22 OpenWebUI also verifies its own credentials with local accounts — two independent checks, not header trust.
 - **Interface** — OpenWebUI is the frontend. It hosts Midnight, does RAG against Qdrant, and sends LLM calls to Ollama.
 - **Inference & data** — Ollama runs three local LLMs with GPU passthrough. Qdrant holds the RAG vectors. n8n handles visual workflow automation.
 - **Physical world** — Home Assistant plus Matter Server, both on host networking so mDNS device discovery works.
@@ -151,11 +151,11 @@ See [`midnight/README.md`](midnight/README.md) for the full system prompt and to
 
 Why things are set up the way they are.
 
-### Cloudflare Access instead of local accounts
+### Cloudflare Access at the edge, local accounts in the app
 
-OpenWebUI doesn't have its own login. Cloudflare Access sits in front, redirects to Google, and passes the authenticated email via a trusted header (`Cf-Access-Authenticated-User-Email`). OpenWebUI auto-creates the user from that header. No local passwords to manage, and access policy lives in one place instead of scattered across services.
+Cloudflare Access sits in front of the public hostname and redirects to Google before any request reaches the LAN. OpenWebUI then verifies its own credentials with a normal login form and local accounts (since 2026-08-22). Earlier, OpenWebUI instead trusted a `Cf-Access-Authenticated-User-Email` header as its sole identity source — that was retired because app-layer header trust cannot tell who set the header, made the proxy identity the only identity (no logout, wrong account shown), and held only as long as nothing untrusted could reach the port. Two independent checks replaced one forgeable assertion.
 
-OpenWebUI trusts that header regardless of source IP, which is only safe if nothing untrusted can reach the port. Here cloudflared runs on a separate LAN host and connects to OpenWebUI over the network, so the port stays published on the LAN — closing the direct-access/header-spoofing gap means restricting port 3000 to the tunnel host at the firewall (a `DOCKER-USER` iptables allowlist, since Docker's published ports bypass ufw), not binding to loopback. `FORWARDED_ALLOW_IPS` pins which upstream uvicorn trusts for `X-Forwarded-*` headers as defense-in-depth.
+The network hardening from that era is deliberately retained as defense-in-depth: port 3000 is restricted to the tunnel host at the firewall (a `DOCKER-USER` iptables allowlist, since Docker's published ports bypass ufw — cloudflared runs on a separate LAN host, so loopback binding would 502 the tunnel), and `FORWARDED_ALLOW_IPS` pins which upstream uvicorn trusts for `X-Forwarded-*` headers.
 
 ### Docker Secrets, not env vars
 
