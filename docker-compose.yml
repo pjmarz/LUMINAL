@@ -146,7 +146,7 @@ services:
       # FORWARDED_ALLOW_IPS pins which upstream may set X-Forwarded-* headers to the
       # docker bridge gateway (what the container sees host->container traffic as).
       # Defense-in-depth on top of the loopback port bind above.
-      - WEBUI_URL=https://openwebui.welcometomarz.net
+      - WEBUI_URL=https://openwebui.marz.fyi
       # DISABLED 2026-08-22: trusting an upstream auth header made the proxy the SOLE
       # identity source. You could not log out (the next request re-authed straight from
       # the header), and the account shown was the proxy identity rather than the local
