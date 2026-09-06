@@ -38,6 +38,8 @@ docker-compose.override.yml
 
 # Logs
 *.log
+*.log.*
+logs/
 
 # Local development
 .env
@@ -63,8 +65,6 @@ secrets
 *temp*
 .DS_Store
 Thumbs.db
-*.swp
-*.swo
 *~
 .cache/
 .tmp/
