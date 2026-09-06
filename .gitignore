@@ -69,3 +69,6 @@ Thumbs.db
 .cache/
 .tmp/
 luminal_resolv.conf
+
+# hand backups of deployed files are not source
+*.prebak*
