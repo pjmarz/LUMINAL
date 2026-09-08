@@ -252,10 +252,6 @@ services:
       # (ollama:11434); Home Assistant runs network_mode: host so it reaches 127.0.0.1
       # — its ollama config entry is pinned to http://127.0.0.1:11434 to match.
       - 127.0.0.1:${OLLAMA_PORT:-11434}:11434 # Ollama API port (host-local only)
-      # 2026-09-08 (Pete): second publish on the LAN address ONLY so the fleet ollama CLIs
-      # (charon/virgil/glados/docker, OLLAMA_HOST -> 192.168.4.155) can reach it. The tailnet
-      # (100.x) is still excluded; the loopback line above stays for Home Assistant.
-      - 192.168.4.155:${OLLAMA_PORT:-11434}:11434
     volumes:
       - ollama_storage:/root/.ollama # Persistent storage for downloaded models
     environment:
