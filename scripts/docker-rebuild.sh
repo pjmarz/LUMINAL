@@ -191,21 +191,91 @@ capture_status() {
 }
 
 # ---------------------------------------------------------------------------
+# is_transient_pull_error — does this pull output look like a registry hiccup
+# rather than a real problem with the image or our credentials?
+#
+# Registry throttles are the common case. Docker Hub answers a throttled pull
+# with a Retry-After header, which compose surfaces as
+#   error from registry: retry-after: 478.208µs, allowed: 44000/minute
+# so `retry-after` and the `allowed: N/minute` budget line both count as
+# transient. A wrong tag or a bad credential does not match and is not retried.
+# ---------------------------------------------------------------------------
+is_transient_pull_error() {
+    local output="$1"
+    grep -Eiq \
+        'toomanyrequests|too many requests|rate limit|retry-after|allowed: *[0-9]+/(second|minute|hour)|timeout|timed out|i/o timeout|TLS handshake timeout|temporary failure|connection reset|connection refused|connection aborted|unexpected EOF|server misbehaving|net/http|(^|[^0-9])(500|502|503|504)([^0-9]|$)' \
+        <<< "$output"
+}
+
+# ---------------------------------------------------------------------------
 # pull_images — pull latest images for all services.
 # This happens BEFORE any containers are touched so a pull failure is safe.
+#
+# Transient registry failures (rate limits, timeouts, 5xx, etc.) are retried
+# with backoff before the script gives up. Defaults can be overridden for
+# testing, e.g. PULL_RETRY_DELAYS="2 5" PULL_RETRY_JITTER_MAX=0.
 # ---------------------------------------------------------------------------
 pull_images() {
     log "Pulling latest images for all services..."
 
-    docker compose pull 2>&1 | tee -a "$LOG_FILE"
-    local rc=${PIPESTATUS[0]}
-    if [[ $rc -eq 0 ]]; then
-        log "Image pull completed successfully"
-        return 0
-    else
-        log "ERROR: Image pull failed (exit code ${rc})"
-        return 1
+    local delays_text="${PULL_RETRY_DELAYS:-120 300 600}"
+    local -a retry_delays=()
+    read -r -a retry_delays <<< "$delays_text"
+
+    local max_attempts=$(( ${#retry_delays[@]} + 1 ))
+    local jitter_max="${PULL_RETRY_JITTER_MAX:-30}"
+    if ! [[ "$jitter_max" =~ ^[0-9]+$ ]]; then
+        jitter_max=30
     fi
+
+    local attempt=1
+    while [[ $attempt -le $max_attempts ]]; do
+        if [[ $attempt -gt 1 ]]; then
+            local base_wait="${retry_delays[$((attempt - 2))]:-600}"
+            if ! [[ "$base_wait" =~ ^[0-9]+$ ]]; then
+                base_wait=600
+            fi
+            local jitter=0
+            if [[ "$jitter_max" -gt 0 ]]; then
+                jitter=$(( RANDOM % (jitter_max + 1) ))
+            fi
+            local wait_seconds=$(( base_wait + jitter ))
+            log "Image pull retry attempt ${attempt}/${max_attempts} — waiting ${wait_seconds}s (${base_wait}s backoff + ${jitter}s jitter) before retry..."
+            sleep "$wait_seconds"
+        fi
+
+        log "Image pull attempt ${attempt}/${max_attempts}..."
+        local pull_tmp
+        pull_tmp=$(mktemp)
+        docker compose pull 2>&1 | tee -a "$LOG_FILE" | tee "$pull_tmp"
+        local pull_rc=${PIPESTATUS[0]}
+        local pull_output
+        pull_output=$(cat "$pull_tmp")
+        rm -f "$pull_tmp"
+
+        if [[ $pull_rc -eq 0 ]]; then
+            log "Image pull completed successfully (attempt ${attempt}/${max_attempts})"
+            return 0
+        fi
+
+        log "WARNING: Image pull attempt ${attempt}/${max_attempts} failed (exit ${pull_rc})"
+
+        if [[ $attempt -ge $max_attempts ]]; then
+            break
+        fi
+
+        if is_transient_pull_error "$pull_output"; then
+            log "Transient pull failure detected — will retry before touching containers"
+        else
+            log "ERROR: Pull failure does not look transient — not retrying"
+            return 1
+        fi
+
+        ((attempt++))
+    done
+
+    log "ERROR: Image pull failed after ${max_attempts} attempt(s)"
+    return 1
 }
 
 # ---------------------------------------------------------------------------
